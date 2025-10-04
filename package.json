@@ -1,0 +1,46 @@
+{
+  "name": "eloo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npx tsx scripts/check-and-init-db.js && next dev --turbopack",
+    "build": "npx tsx scripts/check-and-init-db.js && next build",
+    "start": "npx tsx scripts/check-and-init-db.js && next start",
+    "lint": "eslint",
+    "init-db": "npx tsx scripts/init-db.js"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@heroicons/react": "^2.2.0",
+    "@libsql/client": "^0.15.15",
+    "@yudiel/react-qr-scanner": "^2.3.1",
+    "@zxing/browser": "^0.1.5",
+    "dotenv": "^17.2.2",
+    "jose": "^6.1.0",
+    "lucide-react": "^0.544.0",
+    "next": "15.5.4",
+    "next-auth": "^5.0.0-beta.29",
+    "qrcode": "^1.5.4",
+    "qrcode.react": "^4.2.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-dropzone": "^14.3.8",
+    "react-hook-form": "^7.63.0",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.4",
+    "ignore-loader": "^0.1.2",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
