@@ -193,8 +193,12 @@ export default function UnifiedDashboard() {
                   You have successfully registered for <strong>{registeredEventName}</strong>
                 </p>
                 <p className="text-green-700 text-sm">
-                  Your registration is pending approval. The organizer will review your registration and you&apos;ll be notified once approved.
+                  You&apos;ll be notified once approved via <strong>{session?.user?.email}</strong>. If selected, follow the email instructions to submit payment screenshots and consent forms — once approved you&apos;ll see the status updated here on your dashboard.
                 </p>
+                <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-3 mt-3">
+                  <p className="text-amber-800 text-sm mb-1">If approved you&apos;ll be a participant and can check in at the event.</p>
+                  <p className="text-amber-800 text-sm font-semibold">Refresh to see changes.</p>
+                </div>
                 <button
                   onClick={() => setShowSuccessMessage(false)}
                   className="mt-3 text-sm text-green-700 hover:text-green-900 underline"
@@ -216,13 +220,10 @@ export default function UnifiedDashboard() {
             <h2 className="text-xl md:text-2xl font-bold text-amber-900">Welcome!</h2>
           </div>
           <p className="text-amber-800 mb-2">
-            You can now browse and register for events. When an organizer approves your registration, your account will be upgraded to participant status.
+            Browse and register for events. If approved you&apos;ll be a participant and can check in.
           </p>
-          <p className="text-amber-700 text-sm">
-            Once you become a participant, you&apos;ll be able to check-in to the event.
-          </p>
-          <p className="text-amber-800 font-semibold mt-2">
-            <strong>Remember to refresh to see changes</strong>
+          <p className="text-amber-700 text-sm mt-2">
+            You&apos;ll be notified once approved via <strong>{session?.user?.email}</strong>. If selected, submit payment screenshots when requested — once approved you&apos;ll see the update here.
           </p>
         </div>
 

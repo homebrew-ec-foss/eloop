@@ -307,7 +307,11 @@ export default function EventRegistrationPage({ params }: PageParams) {
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6">
           <h2 className="text-xl font-bold mb-2">Registration Successful!</h2>
           <p>You have successfully registered for {event.name}.</p>
-          <p className="mt-2">You will be redirected to your dashboard shortly.</p>
+          <p className="mt-2 text-sm">You&apos;ll be notified once approved via <strong>{session?.user?.email}</strong>. If selected, follow the email to submit payment screenshots and consent forms — once approved you&apos;ll see the status updated on your dashboard.</p>
+          <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-3 mt-3">
+            <p className="text-amber-800 text-sm mb-1">If approved you&apos;ll be a participant and can check in at the event.</p>
+            <p className="text-amber-800 text-sm font-semibold">Refresh to see changes.</p>
+          </div>
         </div>
         <div className="text-center mt-4">
           <Link href="/dashboard" className="text-indigo-600 hover:text-indigo-800">

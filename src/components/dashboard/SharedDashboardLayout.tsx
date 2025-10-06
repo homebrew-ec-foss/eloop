@@ -106,9 +106,15 @@ export default function SharedDashboardLayout({
         isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
         <div className="mb-8">
-          <Link href={`/${roleLabel.toLowerCase()}/dashboard`} className="text-2xl font-bold" onClick={() => setIsMobileMenuOpen(false)}>
+          <div
+            className="text-2xl font-bold cursor-default"
+            onClick={() => setIsMobileMenuOpen(false)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsMobileMenuOpen(false); }}
+          >
             eloop <span className={`text-sm ${colors.bgLight} text-white px-2 py-1 rounded`}>{roleLabel}</span>
-          </Link>
+          </div>
         </div>
 
         <nav className="flex-1 space-y-1">
