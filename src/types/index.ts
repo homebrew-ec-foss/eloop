@@ -26,6 +26,7 @@ export interface Event {
   organizerId: string;
   checkpoints?: string[];
   unlockedCheckpoints?: string[]; // Checkpoints that are currently unlocked for scanning
+  isRegistrationOpen?: boolean; // Whether new registrations are accepted
   formSchema: FormSchema;
   createdAt: Date;
   updatedAt: Date;

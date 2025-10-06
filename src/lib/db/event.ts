@@ -16,6 +16,7 @@ function rowToEvent(row: Record<string, unknown>): Event {
     organizerId: row.organizer_id as string,
     checkpoints: row.checkpoints ? JSON.parse(row.checkpoints as string) : ["Registration"],
     unlockedCheckpoints: row.unlocked_checkpoints ? JSON.parse(row.unlocked_checkpoints as string) : ["Registration"],
+    isRegistrationOpen: row.is_registration_open !== undefined ? Boolean(row.is_registration_open) : true,
     formSchema: JSON.parse(row.form_schema as string) as FormSchema,
     createdAt: new Date(row.created_at as number),
     updatedAt: new Date(row.updated_at as number)
@@ -49,8 +50,8 @@ export async function createEvent(event: Omit<Event, 'id' | 'createdAt' | 'updat
     
     await turso.execute({
       sql: `
-        INSERT INTO events (id, name, description, date, start_date, end_date, registration_close_date, location, image_url, organizer_id, checkpoints, unlocked_checkpoints, form_schema, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO events (id, name, description, date, start_date, end_date, registration_close_date, location, image_url, organizer_id, checkpoints, unlocked_checkpoints, is_registration_open, form_schema, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       args: [
         id,
@@ -65,6 +66,7 @@ export async function createEvent(event: Omit<Event, 'id' | 'createdAt' | 'updat
         event.organizerId,
         JSON.stringify(event.checkpoints || ["Registration"]),
         JSON.stringify(["Registration"]), // Default: only Registration is unlocked
+        1, // is_registration_open defaults to TRUE
         JSON.stringify(formSchema),
         now,
         now

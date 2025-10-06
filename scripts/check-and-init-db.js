@@ -62,6 +62,7 @@ async function checkAndInitDb() {
           organizer_id TEXT NOT NULL,
           checkpoints TEXT DEFAULT '["Registration"]',
           unlocked_checkpoints TEXT DEFAULT '[]',
+          is_registration_open INTEGER DEFAULT 1,
           form_schema TEXT NOT NULL,
           created_at INTEGER NOT NULL,
           updated_at INTEGER NOT NULL,

@@ -14,6 +14,7 @@ interface EventDetails {
   organizerId: string;
   checkpoints?: string[];
   unlockedCheckpoints?: string[];
+  isRegistrationOpen?: boolean;
   formSchema?: {
     fields: Array<{
       id: string;
@@ -176,6 +177,34 @@ export default function EventPage({ params }: PageParams) {
     }
   };
 
+  const handleRegistrationToggle = async (currentlyOpen: boolean) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}/toggle-registration`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isOpen: !currentlyOpen }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to toggle registration');
+      }
+
+      const data = await response.json();
+      
+      // Update local state
+      setEvent(prev => prev ? {
+        ...prev,
+        isRegistrationOpen: data.event.isRegistrationOpen
+      } : null);
+      
+      alert(data.message);
+    } catch (err) {
+      console.error('Error toggling registration:', err);
+      alert(`Failed to toggle registration: ${(err as Error).message}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
@@ -326,6 +355,35 @@ export default function EventPage({ params }: PageParams) {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+      
+      {/* Registration Control - Only for Organizers/Admins */}
+      {session?.user?.role && ['admin', 'organizer'].includes(session.user.role) && (
+        <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 className="text-xl font-medium mb-2">Registration Control</h2>
+          <p className="text-gray-600 text-sm mb-4">
+            Control whether new applicants can register for this event. When closed, the registration page will show a message that registration is currently closed.
+          </p>
+          
+          <div className="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+            <input
+              type="checkbox"
+              id="registration-toggle"
+              checked={event.isRegistrationOpen ?? true}
+              onChange={() => handleRegistrationToggle(event.isRegistrationOpen ?? true)}
+              className="h-6 w-6 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            />
+            <label 
+              htmlFor="registration-toggle"
+              className="ml-4 flex-1 cursor-pointer"
+            >
+              <span className="font-semibold text-lg text-gray-900">Accept New Registrations</span>
+              <span className={`ml-3 text-base font-medium ${event.isRegistrationOpen ?? true ? 'text-green-600' : 'text-red-600'}`}>
+                {event.isRegistrationOpen ?? true ? '✅ Open - Applicants can register' : '🚫 Closed - Registration disabled'}
+              </span>
+            </label>
           </div>
         </div>
       )}
