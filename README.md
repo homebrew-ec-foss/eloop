@@ -4,6 +4,37 @@ An event management system that integrates with Turso DBaaS storage, supporting 
 
 > **Note**: This project (eloop) is based on the concept and architecture of the original [eventloop](https://github.com/homebrew-ec-foss/eventloop) backend system, reimagined as a modern Next.js frontend with serverless-capabilities.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fpolarhive%2Feloop-serverless-spin&env=ADMIN_EMAIL,GOOGLE_CLIENT_ID,NEXT_PUBLIC_GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,QR_SECRET,NEXTAUTH_SECRET,NEXTAUTH_URL,TURSO_AUTH_TOKEN,TURSO_DATABASE_URL)
+
+
+## Google OAuth Client Setup
+
+To enable Google authentication, follow these steps:
+
+1. **Open Google Cloud Console**  
+   Go to [Google Console](https://console.cloud.google.com).
+
+2. **Access Google Auth Platform**  
+   Click on `View all products` at the bottom of the page.  
+   Locate and select **Google Auth Platform**.
+
+3. **Create a New OAuth Client**  
+   - Navigate to the **Clients** tab.
+   - Click **Create Client**.
+   - Set `Application Type` to **Web Application**.
+
+4. **Configure URIs**  
+   - **Authorised JavaScript origins**:  
+     Add your frontend URL (e.g., `https://your-frontend.vercel.app`).
+   - **Authorised redirect URIs**:  
+     Add your backend callback URL (e.g., `https://your-frontend.vercel.app/api/auth/callback/google`).
+
+5. **Finish Setup**  
+   - Click **Create** to generate your client credentials.
+   - Copy the `Client ID` and `Client Secret` for use in your environment variables.
+
+> **Tip:** If deploying on Vercel, use your Vercel domain for both origins and redirect URIs.
+
 ## Features
 
 - **Role-Based Access Control**: Admin, Organizer, Volunteer, Participant, and Applicant roles with hierarchical permissions
@@ -62,6 +93,7 @@ This project is based on the [eventloop](https://github.com/homebrew-ec-foss/eve
 - Dynamic event registration with custom forms
 - Secure authentication and authorization
 - Fork+Deploy <2mins
+
 
 ### Acknowledgments
 - Thanks to the original eventloop contributors
