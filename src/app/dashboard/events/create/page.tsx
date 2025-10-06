@@ -54,6 +54,9 @@ export default function CreateEventPage() {
       eventData: {
         name: eventData.name,
         description: eventData.description,
+        startDate: eventData.startDate,
+        endDate: eventData.endDate,
+        registrationCloseDate: eventData.registrationCloseDate,
         location: eventData.location,
         imageUrl: eventData.imageUrl,
         checkpoints: eventData.checkpoints,
@@ -93,12 +96,15 @@ export default function CreateEventPage() {
           return;
         }
 
-        // Import event data (excluding dates which should be set manually)
+        // Import event data (including dates)
         if (importedData.eventData) {
           setEventData((prev) => ({
             ...prev,
             name: importedData.eventData.name || '',
             description: importedData.eventData.description || '',
+            startDate: importedData.eventData.startDate || '',
+            endDate: importedData.eventData.endDate || '',
+            registrationCloseDate: importedData.eventData.registrationCloseDate || '',
             location: importedData.eventData.location || '',
             imageUrl: importedData.eventData.imageUrl || '',
             checkpoints: importedData.eventData.checkpoints || ['Registration'],
@@ -115,7 +121,7 @@ export default function CreateEventPage() {
           setFormFields(normalizedFields);
         }
 
-        alert(`Successfully imported event template!\n- Event info loaded\n- ${importedData.formFields.length} form fields loaded\n\nNote: Please set the event dates manually.`);
+  alert(`Successfully imported event template!\n- Event info loaded\n- Event dates loaded\n- ${importedData.formFields.length} form fields loaded`);
       } catch (error) {
         console.error('Error parsing JSON:', error);
         alert('Failed to import template. Please ensure the file is a valid JSON format.');

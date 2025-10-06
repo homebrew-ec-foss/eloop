@@ -193,7 +193,7 @@ export default function UnifiedDashboard() {
                   You have successfully registered for <strong>{registeredEventName}</strong>
                 </p>
                 <p className="text-green-700 text-sm">
-                  You&apos;ll be notified once approved via <strong>{session?.user?.email}</strong>. If selected, follow the email instructions to submit payment screenshots and consent forms — once approved you&apos;ll see the status updated here on your dashboard.
+                  You will receive an email at <strong>{session?.user?.email}</strong> once your application is approved. If selected, submit the payment screenshots when requested. After approval by the organizer, your QR code will appear here and you can show up to the event
                 </p>
                 <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-3 mt-3">
                   <p className="text-amber-800 text-sm mb-1">If approved you&apos;ll be a participant and can check in at the event.</p>
@@ -223,7 +223,7 @@ export default function UnifiedDashboard() {
             Browse and register for events. If approved you&apos;ll be a participant and can check in.
           </p>
           <p className="text-amber-700 text-sm mt-2">
-            You&apos;ll be notified once approved via <strong>{session?.user?.email}</strong>. If selected, submit payment screenshots when requested — once approved you&apos;ll see the update here.
+            You will receive an email at <strong>{session?.user?.email}</strong> once your application is approved. If selected, submit the payment screenshots when requested. After approval by the organizer, your QR code will appear here and you can show up to the event
           </p>
         </div>
 
