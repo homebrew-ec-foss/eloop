@@ -250,6 +250,64 @@ export default function EventRegistrationPage({ params }: PageParams) {
     );
   }
 
+  // Check if registration is closed
+  if (event && event.isRegistrationOpen === false) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-6 mb-6">
+          <div className="flex items-start">
+            <svg className="h-6 w-6 text-amber-600 mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-amber-900 mb-2">Registration Currently Closed</h2>
+              <p className="text-amber-800 mb-2">
+                Registration for <strong>{event.name}</strong> is currently closed.
+              </p>
+              <p className="text-amber-700 text-sm">
+                Please check back later or contact the event organizers for more information.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Show event details even when closed */}
+        <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <h1 className="text-3xl font-bold mb-4">{event.name}</h1>
+          <div className="space-y-3 text-gray-700">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>{new Date(event.date).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}</span>
+            </div>
+            <div className="flex items-center">
+              <svg className="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>{event.location}</span>
+            </div>
+            {event.description && (
+              <div className="mt-4">
+                <p className="text-gray-700 whitespace-pre-line">{event.description}</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <Link href="/dashboard" className="text-indigo-600 hover:text-indigo-800">
+          ← Back to dashboard
+        </Link>
+      </div>
+    );
+  }
+
   // Error state
   if (error || !event) {
     return (

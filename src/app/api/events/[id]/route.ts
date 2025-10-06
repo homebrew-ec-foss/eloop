@@ -57,7 +57,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         organizerId: event.organizerId,
         formSchema: event.formSchema,
         checkpoints: event.checkpoints,
-        unlockedCheckpoints: event.unlockedCheckpoints
+        unlockedCheckpoints: event.unlockedCheckpoints,
+        isRegistrationOpen: event.isRegistrationOpen
       } 
     });
   } catch (error) {

@@ -43,12 +43,15 @@ export async function GET() {
       const participants = users.filter(u => u.role === 'participant');
 
       // Count failed scans
-      const failedScansResult = await turso.execute({
-        sql: `SELECT COUNT(*) as count FROM scan_logs WHERE scan_status != 'success'`
-      });
-      const failedScans = Number(failedScansResult.rows[0]?.count || 0);
-
-      return NextResponse.json({
+      let failedScans = 0;
+      try {
+        const failedScansResult = await turso.execute({
+          sql: `SELECT COUNT(*) as count FROM scan_logs WHERE scan_status != 'success'`
+        });
+          failedScans = Number(failedScansResult.rows[0]?.count || 0);
+        } catch {
+          console.log('scan_logs table not found, defaulting to 0');
+        }      return NextResponse.json({
         role: 'admin',
         events: events.length,
         users: users.length,
@@ -81,12 +84,16 @@ export async function GET() {
       let failedScans = 0;
       
       if (eventIds.length > 0) {
-        const placeholders = eventIds.map(() => '?').join(',');
-        const failedScansResult = await turso.execute({
-          sql: `SELECT COUNT(*) as count FROM scan_logs WHERE event_id IN (${placeholders}) AND scan_status != 'success'`,
-          args: eventIds
-        });
-        failedScans = Number(failedScansResult.rows[0]?.count || 0);
+        try {
+          const placeholders = eventIds.map(() => '?').join(',');
+          const failedScansResult = await turso.execute({
+            sql: `SELECT COUNT(*) as count FROM scan_logs WHERE event_id IN (${placeholders}) AND scan_status != 'success'`,
+            args: eventIds
+          });
+          failedScans = Number(failedScansResult.rows[0]?.count || 0);
+        } catch {
+          console.log('scan_logs table not found, defaulting to 0');
+        }
       }
 
       return NextResponse.json({
