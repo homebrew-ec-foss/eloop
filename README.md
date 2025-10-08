@@ -4,9 +4,6 @@ eloop is an event management system that integrates with Turso (DBaaS), supporti
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fpolarhive%2Feloop-serverless-spin&env=QR_SECRET,GOOGLE_CLIENT_SECRET,TURSO_AUTH_TOKEN,NEXTAUTH_SECRET,ADMIN_EMAIL,TURSO_DATABASE_URL,GOOGLE_CLIENT_ID,NEXTAUTH_URL)
 
-
-> **Note:** (eloop-turso) is based on the concept and architecture of the original [eventloop](https://github.com/homebrew-ec-foss/eventloop) backend system at HSP. Reimagined as a modern Next.js frontend with serverless capabilities.
-
 <details>
 <summary>Required environment variables</summary>
 
@@ -66,6 +63,8 @@ If you don't already have a Turso database, follow these steps to create one and
 - After initialization you should be able to visit the app and sign in; the first login matching `ADMIN_EMAIL` will be promoted to admin automatically.
 
 The application automatically checks for the database tables on startup and initializes them if they don't exist. The user whose email matches the `ADMIN_EMAIL` environment variable will automatically be assigned the admin role when they first sign in. All other new users will be assigned the "applicant" role by default and must be approved by an admin to become participants.
+
+> **Note:** (eloop-turso) is based on the concept and architecture of the original [eventloop](https://github.com/homebrew-ec-foss/eventloop) backend system at HSP. Reimagined as a modern Next.js frontend with serverless capabilities.
 
 ## Features
 

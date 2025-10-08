@@ -358,11 +358,13 @@ export default function EventsPage() {
                   )}
                 </div>
                 
-                <div className="bg-gray-50 px-6 py-3 border-t">
-                  <span className="text-sm text-gray-500">
-                    {registrationCounts[event.id] || 0} registrations
-                  </span>
-                </div>
+                {(userRole === 'admin' || userRole === 'organizer') && (
+                  <div className="bg-gray-50 px-6 py-3 border-t">
+                    <span className="text-sm text-gray-500">
+                      {registrationCounts[event.id] || 0} registrations
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })}
