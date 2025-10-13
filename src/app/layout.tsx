@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Geist, Geist_Mono } from "next/font/google";
 import { NextAuthProvider } from "@/components/auth/AuthProvider";
 import "./globals.css";
@@ -18,9 +19,9 @@ export const metadata: Metadata = {
   title: "eloop - Event Management System",
   description: "A serverless event management system with QR code integration",
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/favicon.ico",
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
   },
 };
 
@@ -38,6 +39,7 @@ export default function RootLayout({
           {children}
         </NextAuthProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

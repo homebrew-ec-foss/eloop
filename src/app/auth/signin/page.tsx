@@ -16,13 +16,32 @@ function SignInContent() {
     await signIn(provider, { callbackUrl });
   };
 
+  // Read hero image env var (trim to avoid whitespace-only values)
+  const heroImage = (process.env.NEXT_PUBLIC_SIGNIN_IMAGE || "").trim();
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-6 bg-gray-50">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
         <div className="text-center">
-          <h1 className="text-3xl font-bold">Welcome to eloop</h1>
+          {/* Optional hero image (kept at top) - only render if an image is configured */}
+          {heroImage ? (
+            <div className="mx-auto mb-4 w-40 h-24 relative">
+              <Image
+                src={heroImage}
+                alt={process.env.NEXT_PUBLIC_SIGNIN_TITLE || "Sign in"}
+                fill
+                sizes="160px"
+                style={{ objectFit: "contain" }}
+              />
+            </div>
+          ) : null}
+
+          <h1 className="text-3xl font-bold">
+            {process.env.NEXT_PUBLIC_SIGNIN_TITLE || "Welcome to eloop"}
+          </h1>
           <p className="mt-2 text-gray-600">
-            Sign in to access our event management system
+            {process.env.NEXT_PUBLIC_SIGNIN_SUBTITLE ||
+              "Sign in to access our event management system"}
           </p>
         </div>
 
@@ -43,6 +62,38 @@ function SignInContent() {
             <Image src="/google.svg" alt="Google" width={20} height={20} />
             <span>Sign in with Google</span>
           </button>
+        </div>
+        
+        {/* Powered by footer */}
+        <div className="mt-6 text-center text-sm text-gray-500 flex items-center justify-center gap-2">
+          <span className="text-gray-400">powered by</span>
+
+          <a
+            href="https://github.com/homebrew-ec-foss/eloop"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-gray-800 hover:text-indigo-600"
+            aria-label="Eloop on GitHub"
+          >
+            eloop:
+          </a>
+          <a
+            href="https://hsp-ec.xyz"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center w-5 h-5 ml-0"
+            aria-label="HSP site"
+          >
+            <div className="w-5 h-5 relative">
+              <Image
+                src={process.env.NEXT_PUBLIC_HSP_LOGO || "https://hsp-ec.xyz/static/images/hsplogo.svg"}
+                alt={"HSP logo"}
+                fill
+                sizes="20px"
+                style={{ objectFit: "contain" }}
+              />
+            </div>
+          </a>
         </div>
       </div>
     </div>
