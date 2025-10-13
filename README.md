@@ -1,6 +1,6 @@
-# eloop-turso — Serverless Event Management
+# eloop by HSP — Event Management Platform
 
-eloop is an event management system that integrates with Turso (DBaaS), supporting hierarchical roles and dynamic form generation.
+Eventloop (eloop) is a serverless event management app built with Next.js and Turso. It supports hierarchical roles, dynamic registration forms, and QR-based check-ins.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fpolarhive%2Feloop-serverless-spin&env=QR_SECRET,GOOGLE_CLIENT_SECRET,TURSO_AUTH_TOKEN,NEXTAUTH_SECRET,ADMIN_EMAIL,TURSO_DATABASE_URL,GOOGLE_CLIENT_ID,NEXTAUTH_URL)
 
@@ -19,7 +19,7 @@ The project reads configuration from environment variables. See the shipped `.en
 - `QR_SECRET` — secret used to sign QR payloads
 - `TURSO_DATABASE_URL` — your Turso/libSQL connection URL (libsql://...)
 - `TURSO_AUTH_TOKEN` — Turso service token used to access the database
-
+- `POSTHOG_KEY=phc_xxx` Uses PostHog for instrumentation
 
 ## Google OAuth Client Setup
 
