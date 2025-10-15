@@ -328,9 +328,10 @@ export default function EventPage({ params }: PageParams) {
           </p>
           
           <div className="space-y-3">
-            {event.checkpoints.map((checkpoint) => {
+            {event.checkpoints.map((checkpoint, idx) => {
               const isUnlocked = event.unlockedCheckpoints?.includes(checkpoint) ?? false;
-              
+              const globalSeq = idx + 1;
+
               return (
                 <div 
                   key={checkpoint} 
@@ -343,15 +344,22 @@ export default function EventPage({ params }: PageParams) {
                     onChange={() => handleCheckpointToggle(checkpoint, isUnlocked)}
                     className="h-5 w-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
                   />
-                  <label 
-                    htmlFor={`checkpoint-${checkpoint}`}
-                    className="ml-3 flex-1 cursor-pointer"
-                  >
-                    <span className="font-medium text-gray-900">{checkpoint}</span>
-                    <span className={`ml-3 text-sm ${isUnlocked ? 'text-green-600' : 'text-gray-500'}`}>
-                      {isUnlocked ? '🔓 Unlocked - Volunteers can scan' : '🔒 Locked - Volunteers cannot scan'}
+                  <div className="ml-3 flex-1 cursor-pointer flex items-center">
+                    <span className="inline-flex items-center justify-center mr-3 w-12 h-8 rounded-full bg-gray-100 text-sm font-semibold text-gray-700">
+                      Seq {globalSeq}
                     </span>
-                  </label>
+                    <div>
+                      <div className="flex items-center">
+                        <span className="font-medium text-gray-900">{checkpoint}</span>
+                        {/* volunteer-visible sequence remains available via unlocked state */}
+                      </div>
+                      <div>
+                        <span className={`text-sm ${isUnlocked ? 'text-green-600' : 'text-gray-500'}`}>
+                          {isUnlocked ? '🔓 Unlocked - Volunteers can scan' : '🔒 Locked - Volunteers cannot scan'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             })}
