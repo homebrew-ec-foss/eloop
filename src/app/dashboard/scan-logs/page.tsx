@@ -82,7 +82,7 @@ export default function ScanLogsPage() {
 
     const headers = ['Timestamp', 'Event', 'Checkpoint', 'Volunteer', 'Status', 'Error', 'User'];
     const rows = filteredScans.map(scan => [
-      new Date(scan.timestamp).toLocaleString('en-IN'),
+      new Date(scan.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
       scan.eventName,
       scan.checkpoint || '-',
       `${scan.volunteerName} (${scan.volunteerEmail})`,
@@ -93,11 +93,14 @@ export default function ScanLogsPage() {
     
     const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `scan-logs-${new Date().toISOString()}.csv`;
-    a.click();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const now = new Date();
+  const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+  a.download = `scan-logs-${ts}.csv`;
+  a.click();
   };
 
   if (status === 'loading') {

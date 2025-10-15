@@ -87,7 +87,7 @@ export async function GET(request: Request) {
         String(row.user_name ?? 'N/A'),
         String(row.user_email ?? 'N/A'),
         String(row.status ?? ''),
-        new Date(Number(row.created_at ?? Date.now())).toLocaleString(),
+        new Date(Number(row.created_at ?? Date.now())).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
         isCheckedIn ? `Yes (${(checkpointCheckIns as unknown[]).length} checkpoint(s))` : 'No'
       ];
 
@@ -115,11 +115,16 @@ export async function GET(request: Request) {
       }).join(','))
     ].join('\n');
 
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const safeName = event.name.replace(/[^a-z0-9]/gi, '_');
+
     return new Response(csvContent, {
       status: 200,
       headers: {
         'Content-Type': 'text/csv',
-        'Content-Disposition': `attachment; filename="${event.name.replace(/[^a-z0-9]/gi, '_')}_registrations_${new Date().toISOString().split('T')[0]}.csv"`
+        'Content-Disposition': `attachment; filename="${safeName}_registrations_${ts}.csv"`
       }
     });
   } catch (error) {
