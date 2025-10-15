@@ -61,6 +61,13 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
   const [csvLinkField, setCsvLinkField] = useState<string>('drive_link');
   const [previewOpen, setPreviewOpen] = useState<Record<string, boolean>>({});
   const [csvLoading, setCsvLoading] = useState<boolean>(false);
+  const [mailBcc, setMailBcc] = useState<string>('');
+
+  // Auto-fill BCC from the active filtered registrations
+  useEffect(() => {
+    const emails = filteredRegistrations.map(r => r.user?.email).filter(Boolean) as string[];
+    setMailBcc(emails.join(','));
+  }, [filteredRegistrations]);
 
   function cleanPhone(num?: string) {
     if (!num) return '';
@@ -175,6 +182,15 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
     // direct pdf
     if (s.endsWith('.pdf')) return s;
     return s; // fallback to open in iframe (may or may not work)
+  }
+
+  function buildGmailUrl(to: string[], bcc: string[], subject: string, body: string) {
+    const params = new URLSearchParams();
+    if (to.length) params.set('to', to.join(','));
+    if (bcc.length) params.set('bcc', bcc.join(','));
+    if (subject) params.set('su', subject);
+    if (body) params.set('body', body);
+    return `https://mail.google.com/mail/?view=cm&fs=1&${params.toString()}`;
   }
   
   // Fetch event data and ALL registrations
@@ -358,7 +374,7 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
       {/* Inline WhatsApp draft + per-registration send (organizers/admins) */}
       {session?.user?.role && ['admin', 'organizer'].includes(session.user.role) && (
         <div className="bg-white shadow-md rounded-lg p-6 mb-6">
-          <h3 className="text-xl font-semibold mb-3">WhatsApp Draft Message</h3>
+          <h3 className="text-xl font-semibold mb-3">WhatsApp+Mail Draft</h3>
           <textarea
             value={draftMessage}
             onChange={e => setDraftMessage(e.target.value)}
@@ -395,6 +411,23 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
             </div>
 
             <div className="col-span-12 text-sm text-gray-600 mt-2">Use the Send button on each registration to open WhatsApp with the draft message. If a CSV row matches this registration key, a Preview button will appear to preview the Drive PDF.</div>
+            <div className="col-span-12 mt-3 flex flex-wrap items-center gap-3">
+              <label className="text-sm mr-2">Mail BCC (auto-filled from filter)</label>
+              <input value={mailBcc} onChange={e => setMailBcc(e.target.value)} placeholder="team1@example.com,team2@example.com" className="flex-1 border border-gray-300 rounded-md p-2 text-sm" />
+              <button
+                onClick={() => {
+                  // Put recipients from the active filter into BCC (user asked for BCC everyone)
+                  const bccEmails = filteredRegistrations.map(r => r.user?.email).filter(Boolean) as string[];
+                  if (bccEmails.length === 0) { alert('No recipients found for current filter'); return; }
+                  const subject = `Update on ${event?.name || 'event'}`;
+                  const gmailUrl = buildGmailUrl([], bccEmails, subject, draftMessage);
+                  window.open(gmailUrl, '_blank');
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                📧 Mail All (BCC)
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -609,7 +642,7 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
                       </div>
 
                       {previewOpen[registration.id] && previewUrl && (
-                        <div className="mt-3 border rounded overflow-hidden" style={{ height: 500 }}>
+                        <div className="mt-3 border rounded overflow-hidden h-[320px] md:h-[60vh] lg:h-[50vh] xl:h-[45vh]">
                           <iframe src={previewUrl} className="w-full h-full" />
                         </div>
                       )}
