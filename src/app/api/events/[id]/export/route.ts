@@ -31,11 +31,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
     
-    // For organizers, verify they own this event
-    if (session.user.role === 'organizer' && event.organizerId !== session.user.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
-    
     // Fetch registrations with user data
     const result = await turso.execute({
       sql: `

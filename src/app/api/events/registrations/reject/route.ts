@@ -42,38 +42,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // If user is an organizer (not admin), they can only reject registrations for their events
-    if (session.user.role === 'organizer') {
-      try {
-        // Import the getEventById function
-        const { getEventById } = await import('@/lib/db/event');
-        
-        // Get the event associated with this registration
-        const event = await getEventById(existingRegistration.eventId);
-        
-        console.log('Event ownership check (reject):', { 
-          eventId: existingRegistration.eventId,
-          eventExists: !!event,
-          eventOrganizerId: event?.organizerId,
-          userId: session.user.id,
-          ownershipMatch: event?.organizerId === session.user.id
-        });
-        
-        // Check if the event exists and belongs to this organizer
-        if (!event || event.organizerId !== session.user.id) {
-          return NextResponse.json(
-            { error: 'You can only reject registrations for your own events' },
-            { status: 403 }
-          );
-        }
-      } catch (error) {
-        console.error('Error during ownership check for rejection:', error);
-        return NextResponse.json(
-          { error: 'Error verifying event ownership for rejection' },
-          { status: 500 }
-        );
-      }
-    }
+    // Note: organizers are authorized by role only for rejection (no per-event ownership check)
     
     // Reject the registration
     const registration = await rejectRegistration(registrationId, session.user.id);
