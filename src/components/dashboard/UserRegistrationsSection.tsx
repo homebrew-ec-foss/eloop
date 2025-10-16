@@ -32,7 +32,7 @@ interface StatusData {
   };
 }
 
-export default function UserRegistrationsSection() {
+export default function UserRegistrationsSection({ viewAsUserId }: { viewAsUserId?: string }) {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const [statusData, setStatusData] = useState<StatusData | null>(null);
@@ -42,7 +42,8 @@ export default function UserRegistrationsSection() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const response = await fetch('/api/users/me/status');
+        const endpoint = viewAsUserId ? `/api/admin/view-as?userId=${encodeURIComponent(viewAsUserId)}` : '/api/users/me/status';
+        const response = await fetch(endpoint);
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -61,10 +62,11 @@ export default function UserRegistrationsSection() {
       }
     };
 
-    if (session?.user) {
+    // If viewing as another user, allow admins to fetch; otherwise only fetch when session exists
+    if ((viewAsUserId && session?.user?.role === 'admin') || (!viewAsUserId && session?.user)) {
       fetchStatus();
     }
-  }, [session, searchParams]);
+  }, [session, searchParams, viewAsUserId]);
 
   // Auto-logout applicants who have been approved (so they can login as participant)
   useEffect(() => {
@@ -139,8 +141,8 @@ export default function UserRegistrationsSection() {
         </p>
       </div>
 
-      {/* QR Code Display - Only show for participants */}
-      {session.user.role === 'participant' && (
+      {/* QR Code Display - show for participants or when admin is viewing as a user */}
+      {(session.user.role === 'participant' || viewAsUserId) && (
         <div className="mb-6 flex justify-center">
           <div className="max-w-sm w-full">
             <GenericQRDisplay 
