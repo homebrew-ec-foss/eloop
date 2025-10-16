@@ -330,7 +330,9 @@ export default function EventPage({ params }: PageParams) {
           <div className="space-y-3">
             {event.checkpoints.map((checkpoint, idx) => {
               const isUnlocked = event.unlockedCheckpoints?.includes(checkpoint) ?? false;
-              const globalSeq = idx + 1;
+              // If unlocked, show its position in the unlockedCheckpoints array (reflects pick/unlock order)
+              const unlockedIdx = event.unlockedCheckpoints?.indexOf(checkpoint) ?? -1;
+              const displaySeq = unlockedIdx >= 0 ? unlockedIdx + 1 : idx + 1;
 
               return (
                 <div 
@@ -346,7 +348,7 @@ export default function EventPage({ params }: PageParams) {
                   />
                   <div className="ml-3 flex-1 cursor-pointer flex items-center">
                     <span className="inline-flex items-center justify-center mr-3 w-12 h-8 rounded-full bg-gray-100 text-sm font-semibold text-gray-700">
-                      Seq {globalSeq}
+                      {displaySeq}
                     </span>
                     <div>
                       <div className="flex items-center">
@@ -355,7 +357,7 @@ export default function EventPage({ params }: PageParams) {
                       </div>
                       <div>
                         <span className={`text-sm ${isUnlocked ? 'text-green-600' : 'text-gray-500'}`}>
-                          {isUnlocked ? '🔓 Unlocked - Volunteers can scan' : '🔒 Locked - Volunteers cannot scan'}
+                          {isUnlocked ? '✅ Unlocked - Volunteers can scan' : '❌ Locked - Volunteers cannot scan'}
                         </span>
                       </div>
                     </div>
