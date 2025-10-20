@@ -53,8 +53,10 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'checked-in'>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [draftMessage, setDraftMessage] = useState<string>(`Hello!\nYou are invited to {EVENT_NAME}.\nPlease confirm your attendance by completing the payment and uploading the payment receipt using the payment confirmation form below.\n\nPayment confirmation form: https://forms.gle/\n\nPlease complete payment by the deadline.\n\nThanks,\nTeam`);
-  const [csvUrl, setCsvUrl] = useState<string>('');
+  const defaultCsvUrl = process.env.NEXT_PUBLIC_CSV_MAILER_LINK ?? process.env.CSV_MAILER_LINK ?? '';
+  const [csvUrl, setCsvUrl] = useState<string>(defaultCsvUrl);
   const [csvRows, setCsvRows] = useState<Array<Record<string, string>>>([]);
   const [csvIndex, setCsvIndex] = useState<Record<string, Record<string, string>>>({});
   const [csvKeyField, setCsvKeyField] = useState<string>('SRN');
@@ -62,6 +64,26 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
   const [previewOpen, setPreviewOpen] = useState<Record<string, boolean>>({});
   const [csvLoading, setCsvLoading] = useState<boolean>(false);
   const [mailBcc, setMailBcc] = useState<string>('');
+  const [pageMessage, setPageMessage] = useState<{ type: 'info' | 'success' | 'error', text: string } | null>(null);
+
+  useEffect(() => {
+    if (csvUrl) return;
+    const fetchServerCsv = async () => {
+      try {
+        const resp = await fetch('/api/env/csv');
+        if (!resp.ok) {
+          if (resp.status === 403) console.warn('CSV mailer link is restricted to admins/organizers');
+          return;
+        }
+        const data = await resp.json();
+        if (data?.csvMailerLink) setCsvUrl(String(data.csvMailerLink));
+      } catch {
+        // ignore network errors
+      }
+    };
+    fetchServerCsv();
+  }, [csvUrl]);
+
 
   // Auto-fill BCC from the active filtered registrations
   useEffect(() => {
@@ -152,7 +174,7 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
 
   const fetchCsvUrl = useCallback(async (url?: string) => {
     const u = (url ?? csvUrl).trim();
-    if (!u) { alert('Enter a CSV URL'); return; }
+    if (!u) { setPageMessage({ type: 'info', text: 'Enter a CSV URL' }); return; }
     setCsvLoading(true);
     try {
       const resp = await fetch(u);
@@ -161,14 +183,20 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
       const rows = parseCSV(text);
       setCsvRows(rows);
       setCsvIndex(indexCsv(rows, csvKeyField));
-      alert(`Loaded ${rows.length} rows from CSV`);
+      setPageMessage({ type: 'success', text: `Loaded ${rows.length} rows from CSV` });
     } catch (err) {
       console.error('Failed to fetch CSV URL', err);
-      alert(`Failed to fetch CSV: ${err instanceof Error ? err.message : String(err)}`);
+      setPageMessage({ type: 'error', text: `Failed to fetch CSV: ${err instanceof Error ? err.message : String(err)}` });
     } finally {
       setCsvLoading(false);
     }
   }, [csvUrl, csvKeyField]);
+
+  useEffect(() => {
+    if (!csvUrl) return;
+    if (csvRows.length > 0) return;
+    void fetchCsvUrl();
+  }, [csvUrl, csvRows.length, fetchCsvUrl]);
 
   function getPreviewUrlFromLink(link: string) {
     if (!link) return '';
@@ -235,12 +263,26 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
   
   // Filter registrations based on status
   useEffect(() => {
-    if (statusFilter === 'all') {
-      setFilteredRegistrations(registrations);
-    } else {
-      setFilteredRegistrations(registrations.filter(reg => reg.status === statusFilter));
+    const q = searchQuery.trim().toLowerCase();
+    const byStatus = statusFilter === 'all' ? registrations : registrations.filter(reg => reg.status === statusFilter);
+    if (!q) {
+      setFilteredRegistrations(byStatus);
+      return;
     }
-  }, [registrations, statusFilter]);
+
+    const matches = byStatus.filter(reg => {
+      if (reg.user?.name && String(reg.user.name).toLowerCase().includes(q)) return true;
+      if (reg.user?.email && String(reg.user.email).toLowerCase().includes(q)) return true;
+      if (String(reg.id).toLowerCase().includes(q)) return true;
+      for (const v of Object.values(reg.responses || {})) {
+        if (v == null) continue;
+        if (String(v).toLowerCase().includes(q)) return true;
+      }
+      return false;
+    });
+
+    setFilteredRegistrations(matches);
+  }, [registrations, statusFilter, searchQuery]);
   
   // Redirect if not authenticated or not organizer/admin
   useEffect(() => {
@@ -279,7 +321,7 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
       );
     } catch (err) {
       console.error('Error approving registration:', err);
-      alert(err instanceof Error ? err.message : 'Failed to approve registration');
+      setPageMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to approve registration' });
     } finally {
       setProcessingId(null);
     }
@@ -311,7 +353,7 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
       );
     } catch (err) {
       console.error('Error rejecting registration:', err);
-      alert(err instanceof Error ? err.message : 'Failed to reject registration');
+      setPageMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to reject registration' });
     } finally {
       setProcessingId(null);
     }
@@ -349,6 +391,15 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
+      {/* Page-level message banner */}
+      {pageMessage && (
+        <div className={`mb-4 px-4 py-3 rounded ${pageMessage.type === 'error' ? 'bg-red-50 border border-red-200 text-red-700' : pageMessage.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-blue-50 border border-blue-200 text-blue-700'}`}>
+          <div className="flex justify-between items-center">
+            <div>{pageMessage.text}</div>
+            <button onClick={() => setPageMessage(null)} className="text-sm underline">Dismiss</button>
+          </div>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Event Registrations</h1>
         <div className="flex gap-3">
@@ -418,7 +469,7 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
                 onClick={() => {
                   // Put recipients from the active filter into BCC (user asked for BCC everyone)
                   const bccEmails = filteredRegistrations.map(r => r.user?.email).filter(Boolean) as string[];
-                  if (bccEmails.length === 0) { alert('No recipients found for current filter'); return; }
+                  if (bccEmails.length === 0) { setPageMessage({ type: 'info', text: 'No recipients found for current filter' }); return; }
                   const subject = `Update on ${event?.name || 'event'}`;
                   const gmailUrl = buildGmailUrl([], bccEmails, subject, draftMessage);
                   window.open(gmailUrl, '_blank');
@@ -438,7 +489,17 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
           {new Date(event.date).toLocaleDateString()} at {event.location}
         </p>
         
-        {/* Status Filter */}
+        {/* Search + Status Filter */}
+        <div className="mb-4">
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search by name, email, id, or response"
+            className="w-full sm:w-1/2 border border-gray-300 rounded-md p-2 mb-3 sm:mb-0"
+          />
+        </div>
+
         <div className="flex flex-wrap gap-2 mt-4">
           <button
             onClick={() => setStatusFilter('all')}

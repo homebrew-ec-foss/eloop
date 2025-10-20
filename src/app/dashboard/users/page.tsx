@@ -14,6 +14,7 @@ export default function AdminUsersPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<UserRole>('participant');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'applicant' | UserRole>(filterParam === 'unapproved' ? 'applicant' : filterParam === 'applicant' ? 'applicant' : 'all');
 
   // Fetch users
@@ -40,12 +41,17 @@ export default function AdminUsersPage() {
 
   // Filter users based on role filter
   useEffect(() => {
-    if (roleFilter === 'all') {
-      setFilteredUsers(users);
-    } else {
-      setFilteredUsers(users.filter(user => user.role === roleFilter));
+    const q = searchQuery.trim().toLowerCase();
+    const byRole = roleFilter === 'all' ? users : users.filter(user => user.role === roleFilter);
+    if (!q) {
+      setFilteredUsers(byRole);
+      return;
     }
-  }, [users, roleFilter]);
+
+    setFilteredUsers(byRole.filter(user => {
+      return (user.name || '').toLowerCase().includes(q) || (user.email || '').toLowerCase().includes(q);
+    }));
+  }, [users, roleFilter, searchQuery]);
 
   // Update user role
   const updateUserRole = async (userId: string, role: UserRole) => {
@@ -103,7 +109,7 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div>
+    <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">User Management</h1>
       
       {error && (
@@ -118,7 +124,16 @@ export default function AdminUsersPage() {
         </div>
       )}
       
-      {/* Filter Buttons */}
+      {/* Search + Filter Buttons */}
+      <div className="mb-4">
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Search by name or email"
+          className="w-full sm:w-1/2 border border-gray-300 rounded-md p-2 mb-3 sm:mb-0"
+        />
+      </div>
       <div className="mb-6 flex flex-wrap gap-2">
         <button
           onClick={() => setRoleFilter('all')}
@@ -184,7 +199,8 @@ export default function AdminUsersPage() {
       
       {isLoading && <div className="text-gray-500">Loading users...</div>}
       
-      <div className="overflow-x-auto">
+      {/* Desktop/table view (sm and up) */}
+      <div className="hidden sm:block overflow-x-auto">
         <table className="min-w-full bg-white rounded-lg shadow">
           <thead className="bg-gray-100">
             <tr>
@@ -252,12 +268,64 @@ export default function AdminUsersPage() {
           </tbody>
         </table>
       </div>
+      {/* Mobile/card view (below sm) */}
+      <div className="sm:hidden space-y-3">
+        {filteredUsers.map(user => (
+          <div key={user.id} className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="font-medium text-sm text-gray-900">{user.name}</div>
+                <div className="text-sm text-gray-500">{user.email}</div>
+                <div className="mt-2">
+                  <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full text-white ${getRoleBadgeColor(user.role)}`}>{user.role}</span>
+                </div>
+              </div>
+              <div className="text-right text-sm">
+                <div className="text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</div>
+                <div className="mt-3">
+                  {editingUser === user.id ? (
+                    <div className="flex items-center space-x-2">
+                      <select
+                        value={selectedRole}
+                        onChange={handleRoleChange}
+                        className="border rounded px-2 py-1 text-sm"
+                      >
+                        <option value="applicant">Applicant</option>
+                        <option value="participant">Participant</option>
+                        <option value="volunteer">Volunteer</option>
+                        <option value="organizer">Organizer</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      <button
+                        onClick={() => updateUserRole(user.id, selectedRole)}
+                        className="bg-purple-600 text-white px-2 py-1 rounded text-sm"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setSelectedRole(user.role);
+                        setEditingUser(user.id);
+                      }}
+                      className="text-purple-600 hover:text-purple-900 text-sm"
+                    >
+                      Change Role
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
 
-      {filteredUsers.length === 0 && !isLoading && (
-        <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
-          No {roleFilter === 'all' ? '' : roleFilter + ' '}users found.
-        </div>
-      )}
+        {filteredUsers.length === 0 && !isLoading && (
+          <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
+            No {roleFilter === 'all' ? '' : roleFilter + ' '}users found.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
