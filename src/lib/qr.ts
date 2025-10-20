@@ -16,10 +16,13 @@ export async function generateParticipantQR(userId: string, eventId: string): Pr
     secret: crypto.randomUUID(), // Unique to this registration
   };
   
+  // Use a single configurable expiration for QR tokens. Default to '30d' if not set.
+  const qrExpiration = process.env.QR_EXPIRATION || '30d';
+
   const token = await new SignJWT(qrData)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('7d') // Participant QR codes last for 30 days
+    .setExpirationTime(qrExpiration)
     .sign(SECRET_KEY);
   
   // Generate QR code image as data URL
@@ -54,9 +57,12 @@ export async function generateQRCodeForStorage(userId: string, eventId: string):
     secret: crypto.randomUUID(),
   };
   
+  // Use the same configurable expiration for storage QR tokens.
+  const qrExpiration = process.env.QR_EXPIRATION || '30d';
+
   return new SignJWT(qrData)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('30d')
+    .setExpirationTime(qrExpiration)
     .sign(SECRET_KEY);
 }

@@ -2,30 +2,54 @@
 // Usage: npx tsx scripts/check-and-init-db.js
 
 import { config } from 'dotenv';
+import fs from 'fs';
 import path from 'path';
 
-// Load environment variables from .env and .env.local
-config({ path: path.resolve(process.cwd(), '.env') });
-config({ path: path.resolve(process.cwd(), '.env.local') });
+// Load environment variables in this order (later entries override earlier):
+// .env, .env.local, .env.development, .env.development.local
+const envFiles = [
+  '.env',
+  '.env.local',
+  '.env.development',
+  '.env.development.local',
+];
+
+for (const file of envFiles) {
+  const filePath = path.resolve(process.cwd(), file);
+  if (fs.existsSync(filePath)) {
+    config({ path: filePath, override: true });
+    console.log(`Loaded env file: ${file}`);
+  }
+}
 
 // Print environment for debugging
 console.log('Checking database tables...');
 
-// Manual import of database functions to avoid ESM/CJS issues
 async function checkAndInitDb() {
-  // Create Turso client directly instead of importing
+  const tursoUrl = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL;
+  if (!tursoUrl) {
+    const foundFiles = envFiles.filter((f) => fs.existsSync(path.resolve(process.cwd(), f)));
+    console.error('TURSO_DATABASE_URL is not set.');
+    if (foundFiles.length > 0) {
+      console.error('Found these env files in the project root:');
+      for (const f of foundFiles) console.error('  -', f);
+    } else {
+      console.error('No env files were found in the project root.');
+    }
+    console.error('\nRun: vercel env pull .env.development.local');
+    process.exit(1);
+  }
+
   const { createClient } = await import('@libsql/client');
-  
   const turso = createClient({
-    url: process.env.TURSO_DATABASE_URL,
+    url: tursoUrl,
     authToken: process.env.TURSO_AUTH_TOKEN,
   });
-  
+
   console.log('Turso client created');
   
   // Check if tables exist
   try {
-    // Check if events table exists
     const checkEventsTable = await turso.execute(`
       SELECT name FROM sqlite_master WHERE type='table' AND name='events'
     `);
@@ -34,7 +58,6 @@ async function checkAndInitDb() {
       console.log('Database tables not found. Initializing...');
       
       // Create tables
-      // User profiles table
       await turso.execute(`
         CREATE TABLE IF NOT EXISTS users (
           id TEXT PRIMARY KEY,
