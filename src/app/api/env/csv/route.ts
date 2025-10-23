@@ -1,18 +1,34 @@
 import { NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { auth } from '@/lib/auth';
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    const role = token?.role as string | undefined;
-    if (!role || !(role === 'admin' || role === 'organizer')) {
-      return new NextResponse(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
+    const session = await auth();
+    
+    // User must be logged in
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+    
+    // User must be admin or organizer
+    if (session.user.role !== 'admin' && session.user.role !== 'organizer') {
+      return NextResponse.json(
+        { error: 'Admin or organizer access required' },
+        { status: 403 }
+      );
     }
 
-  const csvMailerLink = process.env.CSV_MAILER_LINK ?? process.env.NEXT_PUBLIC_CSV_MAILER_LINK ?? '';
-  const csvMailerPrimary = process.env.CSV_MAILER_PRIMARY ?? process.env.NEXT_PUBLIC_CSV_MAILER_PRIMARY ?? '';
-  return NextResponse.json({ csvMailerLink, csvMailerPrimary });
-  } catch {
-    return new NextResponse(JSON.stringify({ error: 'Server error' }), { status: 500 });
+    const csvMailerLink = process.env.CSV_MAILER_LINK ?? '';
+    const csvMailerPrimary = process.env.CSV_MAILER_PRIMARY ?? '';
+    return NextResponse.json({ csvMailerLink, csvMailerPrimary });
+  } catch (error) {
+    console.error('Error in /api/env/csv:', error);
+    return NextResponse.json(
+      { error: 'Server error' },
+      { status: 500 }
+    );
   }
 }

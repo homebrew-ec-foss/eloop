@@ -55,8 +55,7 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'checked-in'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [draftMessage, setDraftMessage] = useState<string>(`Hello!\nYou are invited to {EVENT_NAME}.\nPlease confirm your attendance by completing the payment and uploading the payment receipt using the payment confirmation form below.\n\nPayment confirmation form: https://forms.gle/\n\nPlease complete payment by the deadline.\n\nThanks,\nTeam`);
-  const defaultCsvUrl = process.env.NEXT_PUBLIC_CSV_MAILER_LINK ?? process.env.CSV_MAILER_LINK ?? '';
-  const [csvUrl, setCsvUrl] = useState<string>(defaultCsvUrl);
+  const [csvUrl, setCsvUrl] = useState<string>('');
   const [csvRows, setCsvRows] = useState<Array<Record<string, string>>>([]);
   const [csvIndex, setCsvIndex] = useState<Record<string, Record<string, string>>>({});
   const [csvKeyField, setCsvKeyField] = useState<string>('SRN');
