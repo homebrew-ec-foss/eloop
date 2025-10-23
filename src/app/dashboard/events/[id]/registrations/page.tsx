@@ -77,6 +77,9 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
         }
         const data = await resp.json();
         if (data?.csvMailerLink) setCsvUrl(String(data.csvMailerLink));
+        if (data?.csvMailerPrimary && csvKeyField === 'SRN') {
+          setCsvKeyField(String(data.csvMailerPrimary));
+        }
       } catch {
         // ignore network errors
       }

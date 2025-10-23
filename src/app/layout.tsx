@@ -15,13 +15,18 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const envTitle = process.env.NEXT_PUBLIC_SIGNIN_TITLE;
+const envSubtitle = process.env.NEXT_PUBLIC_SIGNIN_SUBTITLE;
+const favImage = process.env.NEXT_PUBLIC_SIGNIN_FAVICON;
+
+
 export const metadata: Metadata = {
-  title: "eloop - Event Management System",
-  description: "A serverless event management system with QR code integration",
+  title: envTitle && envSubtitle ? `${envTitle} - ${envSubtitle}` : envTitle ?? "eloop - Event Management System",
+  description: envSubtitle ?? "A serverless event management system with QR code integration",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
-    apple: "/favicon.svg",
+    icon: favImage ?? "/favicon.svg",
+    shortcut: favImage ?? "/favicon.svg",
+    apple: favImage ?? "/favicon.svg",
   },
 };
 

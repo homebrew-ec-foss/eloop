@@ -151,7 +151,39 @@ export default function EventPage({ params }: PageParams) {
   };
 
   const handleCheckpointToggle = async (checkpoint: string, currentlyUnlocked: boolean) => {
+    if (!event) return;
+
+    // Prevent concurrent actions
     try {
+      setActionLoading(checkpoint);
+
+      // If we're unlocking a checkpoint that is NOT the special "Registration" checkpoint,
+      // enforce the rule: only one non-registration checkpoint may be unlocked at a time.
+      // So lock any other unlocked non-registration checkpoints first.
+      const isUnlocking = !currentlyUnlocked;
+      const SPECIAL_REG_NAME = 'Registration';
+
+      if (isUnlocking && checkpoint !== SPECIAL_REG_NAME) {
+        const othersToLock = (event.unlockedCheckpoints || []).filter(c => c !== checkpoint && c !== SPECIAL_REG_NAME);
+
+        for (const other of othersToLock) {
+          const lockResp = await fetch(`/api/events/${eventId}/unlock-checkpoint`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ checkpoint: other, action: 'lock' }),
+          });
+
+          if (!lockResp.ok) {
+            const errorData = await lockResp.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to lock checkpoint ${other}`);
+          }
+
+          const lockData = await lockResp.json();
+          setEvent(prev => prev ? ({ ...prev, unlockedCheckpoints: lockData.event.unlockedCheckpoints }) : null);
+        }
+      }
+
+      // Now toggle the requested checkpoint (either lock or unlock)
       const action = currentlyUnlocked ? 'lock' : 'unlock';
       const response = await fetch(`/api/events/${eventId}/unlock-checkpoint`, {
         method: 'POST',
@@ -160,20 +192,18 @@ export default function EventPage({ params }: PageParams) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to update checkpoint');
       }
 
       const data = await response.json();
-      
-      // Update local state
-      setEvent(prev => prev ? {
-        ...prev,
-        unlockedCheckpoints: data.event.unlockedCheckpoints
-      } : null);
+      // Update local state with canonical server response
+      setEvent(prev => prev ? ({ ...prev, unlockedCheckpoints: data.event.unlockedCheckpoints }) : null);
     } catch (err) {
       console.error('Error updating checkpoint:', err);
       alert(`Failed to update checkpoint access: ${(err as Error).message}`);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -344,7 +374,8 @@ export default function EventPage({ params }: PageParams) {
                     id={`checkpoint-${checkpoint}`}
                     checked={isUnlocked}
                     onChange={() => handleCheckpointToggle(checkpoint, isUnlocked)}
-                    className="h-5 w-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    disabled={!!actionLoading}
+                    className="h-5 w-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <div className="ml-3 flex-1 cursor-pointer flex items-center">
                     <span className="inline-flex items-center justify-center mr-3 w-12 h-8 rounded-full bg-gray-100 text-sm font-semibold text-gray-700">

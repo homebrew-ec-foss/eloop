@@ -38,10 +38,12 @@ export async function POST(request: Request) {
       );
     }
     
-    // Check if registration deadline has passed
-    if (event.registrationCloseDate && new Date() > event.registrationCloseDate) {
+    // If the organizer has explicitly closed registrations, reject.
+    // Otherwise, allow registration even if registrationCloseDate has passed
+    // so organizers can re-open registrations after the deadline by toggling.
+    if (event.isRegistrationOpen === false) {
       return NextResponse.json(
-        { error: 'Registration deadline has passed for this event' },
+        { error: 'Registration is currently closed for this event' },
         { status: 400 }
       );
     }

@@ -121,47 +121,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate sequential checkpoint order
-    const checkpointIndex = checkpoints.indexOf(checkpoint);
-    if (checkpointIndex === -1) {
+    // Validate that checkpoint exists in event's checkpoint list
+    if (!checkpoints.includes(checkpoint)) {
       return NextResponse.json(
         { error: `Invalid checkpoint: ${checkpoint} is not part of this event` },
         { status: 400 }
       );
-    }
-
-    // Check if all previous checkpoints have been completed
-    if (checkpointIndex > 0) {
-      const previousCheckpoints = checkpoints.slice(0, checkpointIndex);
-      const completedCheckpoints = checkpointCheckIns.map(c => c.checkpoint);
-      
-      const missingCheckpoints = previousCheckpoints.filter(cp => !completedCheckpoints.includes(cp));
-      
-      if (missingCheckpoints.length > 0) {
-        const user = await getUserById(registration.userId);
-        await logScanAttempt({
-          eventId: registration.eventId,
-          volunteerId: session.user.id,
-          qrCode: qrToken,
-          checkpoint,
-          scanStatus: 'wrong_checkpoint',
-          errorMessage: `Must complete ${missingCheckpoints[0]} before checking into ${checkpoint}`,
-          userId: registration.userId,
-          registrationId: registration.id
-        });
-        return NextResponse.json(
-          { 
-            error: `Must complete ${missingCheckpoints[0]} before checking into ${checkpoint}`,
-            user: user ? { id: user.id, name: user.name, email: user.email } : undefined,
-            registration: {
-              ...registration,
-              eventName: event.name,
-              checkpointCheckIns
-            }
-          },
-          { status: 400 }
-        );
-      }
     }
 
     const updatedRegistration = await checkInParticipantAtCheckpoint(

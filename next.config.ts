@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      // Allow external HTTPS images from any hostname. This is permissive —
+      // prefer listing trusted hosts in production if possible.
+      {
+        protocol: 'https',
+        hostname: '**',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   
