@@ -1,0 +1,21 @@
+meta {
+  name: scan_logs
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{process.env.NEXTAUTH_URL}}/api/admin/export/table?table=scan_logs&key={{process.env.CSV_EXPORT_KEY}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  table: scan_logs
+  key: {{process.env.CSV_EXPORT_KEY}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

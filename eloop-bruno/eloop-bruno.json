@@ -1,0 +1,207 @@
+{
+  "name": "eloop",
+  "version": "1",
+  "items": [
+    {
+      "type": "http",
+      "name": "users",
+      "filename": "export_users.bru",
+      "seq": 2,
+      "settings": {
+        "encodeUrl": true,
+        "timeout": 0
+      },
+      "tags": [],
+      "request": {
+        "url": "{{process.env.NEXTAUTH_URL}}/api/admin/export/table?table=users&key={{process.env.CSV_EXPORT_KEY}}",
+        "method": "GET",
+        "headers": [],
+        "params": [
+          {
+            "name": "table",
+            "value": "users",
+            "type": "query",
+            "enabled": true
+          },
+          {
+            "name": "key",
+            "value": "{{process.env.CSV_EXPORT_KEY}}",
+            "type": "query",
+            "enabled": true
+          }
+        ],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "inherit"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "registrations",
+      "filename": "export_registrations.bru",
+      "seq": 4,
+      "settings": {
+        "encodeUrl": true,
+        "timeout": 0
+      },
+      "tags": [],
+      "request": {
+        "url": "{{process.env.NEXTAUTH_URL}}/api/admin/export/table?table=registrations&key={{process.env.CSV_EXPORT_KEY}}",
+        "method": "GET",
+        "headers": [],
+        "params": [
+          {
+            "name": "table",
+            "value": "registrations",
+            "type": "query",
+            "enabled": true
+          },
+          {
+            "name": "key",
+            "value": "{{process.env.CSV_EXPORT_KEY}}",
+            "type": "query",
+            "enabled": true
+          }
+        ],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "inherit"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "scan_logs",
+      "filename": "export_scan_logs.bru",
+      "seq": 3,
+      "settings": {
+        "encodeUrl": true,
+        "timeout": 0
+      },
+      "tags": [],
+      "request": {
+        "url": "{{process.env.NEXTAUTH_URL}}/api/admin/export/table?table=scan_logs&key={{process.env.CSV_EXPORT_KEY}}",
+        "method": "GET",
+        "headers": [],
+        "params": [
+          {
+            "name": "table",
+            "value": "scan_logs",
+            "type": "query",
+            "enabled": true
+          },
+          {
+            "name": "key",
+            "value": "{{process.env.CSV_EXPORT_KEY}}",
+            "type": "query",
+            "enabled": true
+          }
+        ],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "inherit"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "checkpoint",
+      "filename": "export_checkpoint.bru",
+      "seq": 5,
+      "settings": {
+        "encodeUrl": true,
+        "timeout": 0
+      },
+      "tags": [],
+      "request": {
+        "url": "{{process.env.NEXTAUTH_URL}}/api/admin/export/checkpoint?event_id={{process.env.EVENT_ID}}&key={{process.env.CSV_EXPORT_KEY}}",
+        "method": "GET",
+        "headers": [],
+        "params": [
+          {
+            "name": "event_id",
+            "value": "{{process.env.EVENT_ID}}",
+            "type": "query",
+            "enabled": true
+          },
+          {
+            "name": "key",
+            "value": "{{process.env.CSV_EXPORT_KEY}}",
+            "type": "query",
+            "enabled": true
+          }
+        ],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "inherit"
+        }
+      }
+    },
+    {
+      "type": "folder",
+      "name": "exports",
+      "filename": "exports",
+      "seq": 6,
+      "root": {
+        "meta": {
+          "name": "exports",
+          "seq": 6
+        }
+      }
+    }
+  ],
+  "activeEnvironmentUid": "teaxSwGdLOq4UjUC9BLuQ",
+  "environments": [],
+  "brunoConfig": {
+    "version": "1",
+    "name": "eloop",
+    "type": "collection",
+    "ignore": [
+      "node_modules",
+      ".git"
+    ],
+    "size": 0.001049041748046875,
+    "filesCount": 5
+  }
+}

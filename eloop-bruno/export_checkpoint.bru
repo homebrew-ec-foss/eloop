@@ -1,0 +1,21 @@
+meta {
+  name: checkpoint
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{process.env.NEXTAUTH_URL}}/api/admin/export/checkpoint?event_id={{process.env.EVENT_ID}}&key={{process.env.CSV_EXPORT_KEY}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  event_id: {{process.env.EVENT_ID}}
+  key: {{process.env.CSV_EXPORT_KEY}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

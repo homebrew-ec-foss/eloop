@@ -1,0 +1,21 @@
+meta {
+  name: users
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{process.env.NEXTAUTH_URL}}/api/admin/export/table?table=users&key={{process.env.CSV_EXPORT_KEY}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  table: users
+  key: {{process.env.CSV_EXPORT_KEY}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

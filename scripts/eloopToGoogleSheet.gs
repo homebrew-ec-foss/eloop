@@ -9,7 +9,7 @@ const SHEET_NAME = props.getProperty('SHEET_NAME');
 function importCSVFromEloop() {
   try {
     // Build the URL dynamically
-    const csvUrl = `${NEXTAUTH_URL}/api/events/${EVENT_ID}/export/key?key=${CSV_EXPORT_KEY}`;
+    const csvUrl = `${NEXTAUTH_URL}/api/admin/export/checkpoint?event_id=${EVENT_ID}&key=${CSV_EXPORT_KEY}`;
 
     // Fetch CSV content
     const csvContent = UrlFetchApp.fetch(csvUrl).getContentText();
