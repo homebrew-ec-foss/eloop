@@ -386,10 +386,6 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
     );
   }
 
-  const handleExport = () => {
-    // Open the export endpoint in a new window to download the CSV
-    window.open(`/api/events/${eventId}/export`, '_blank');
-  };
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -405,16 +401,6 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Event Registrations</h1>
         <div className="flex gap-3">
-          <button
-            onClick={handleExport}
-            disabled={registrations.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Export to CSV
-          </button>
           <Link 
             href={`/dashboard/events/${eventId}`}
             className="text-indigo-600 hover:text-indigo-800 flex items-center"

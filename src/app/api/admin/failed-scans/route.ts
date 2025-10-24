@@ -56,6 +56,20 @@ export async function GET() {
     // Fetch all scans (both successful and failed) with volunteer and event details
     const result = await turso.execute(query);
 
+    const fmtExcelDT = (ts: number | string | undefined | null) => {
+      if (ts === undefined || ts === null || ts === '') return '';
+      const d = new Date(Number(ts));
+      if (Number.isNaN(d.getTime())) return String(ts);
+      const options: Intl.DateTimeFormatOptions = {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+        timeZone: 'Asia/Kolkata'
+      };
+      const parts = new Intl.DateTimeFormat('en-GB', options).formatToParts(d);
+      const get = (type: string) => parts.find(p => p.type === type)?.value ?? '';
+      return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`;
+    };
+
     const scans = result.rows.map(row => ({
       id: row.id as string,
       qr_code: row.qr_code as string | null,
@@ -68,7 +82,7 @@ export async function GET() {
       volunteer_email: row.volunteer_email as string | null,
       user_name: row.user_name as string | null,
       user_email: row.user_email as string | null,
-      created_at: row.created_at as string,
+      created_at: fmtExcelDT(row.created_at as number | string),
     }));
 
     return NextResponse.json({ scans });

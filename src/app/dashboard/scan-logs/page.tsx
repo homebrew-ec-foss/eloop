@@ -72,36 +72,7 @@ export default function ScanLogsPage() {
     }
   };
 
-  const exportToCSV = () => {
-    const filteredScans = failedScans.filter(scan => {
-      if (filterStatus === 'all') return true;
-      if (filterStatus === 'success') return scan.scanStatus === 'success';
-      if (filterStatus === 'failed') return scan.scanStatus !== 'success';
-      return true;
-    });
 
-    const headers = ['Timestamp', 'Event', 'Checkpoint', 'Volunteer', 'Status', 'Error', 'User'];
-    const rows = filteredScans.map(scan => [
-      new Date(scan.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-      scan.eventName,
-      scan.checkpoint || '-',
-      `${scan.volunteerName} (${scan.volunteerEmail})`,
-      scan.scanStatus,
-      scan.errorMessage || '-',
-      scan.userName ? `${scan.userName} (${scan.userEmail})` : '-'
-    ]);
-    
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const now = new Date();
-  const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-  a.download = `scan-logs-${ts}.csv`;
-  a.click();
-  };
 
   if (status === 'loading') {
     return (
@@ -146,18 +117,6 @@ export default function ScanLogsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 Refresh
-              </button>
-              
-              <button
-                onClick={exportToCSV}
-                disabled={failedScans.length === 0}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm font-medium"
-                title="Export to CSV"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Export CSV
               </button>
             </div>
             

@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "eloop",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
