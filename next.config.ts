@@ -21,22 +21,7 @@ const nextConfig: NextConfig = {
     ],
   },
   
-  // Configure webpack to ignore LICENSE files
-  webpack: (config) => {
-    config.module = config.module || {};
-    config.module.rules = config.module.rules || [];
-    config.module.rules.push({
-      test: /LICENSE$/,
-      use: 'ignore-loader',
-    });
-    
-    return config;
-  },
-  
-  // Disable ESLint for production build
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  turbopack: {},
   
   async rewrites() {
     const posthogUiHost = process.env.POSTHOG_UI_HOST || "https://eu.posthog.com"
