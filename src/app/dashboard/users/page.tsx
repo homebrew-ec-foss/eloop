@@ -252,15 +252,45 @@ export default function AdminUsersPage() {
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => {
-                        setSelectedRole(user.role);
-                        setEditingUser(user.id);
-                      }}
-                      className="text-purple-600 hover:text-purple-900"
-                    >
-                      Change Role
-                    </button>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={() => {
+                          setSelectedRole(user.role);
+                          setEditingUser(user.id);
+                        }}
+                        className="text-purple-600 hover:text-purple-900"
+                      >
+                        Change Role
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Delete user ${user.name} <${user.email}>? This action cannot be undone.`)) return;
+                          try {
+                            setIsLoading(true);
+                            setError(null);
+                            const res = await fetch('/api/admin/users', {
+                              method: 'DELETE',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ userId: user.id }),
+                            });
+                            if (!res.ok) {
+                              const err = await res.json();
+                              throw new Error(err?.error || 'Failed to delete user');
+                            }
+                            // Remove from UI
+                            setUsers(prev => prev.filter(u => u.id !== user.id));
+                            setSuccessMessage(`User ${user.name} deleted`);
+                          } catch (err) {
+                            setError('Error deleting user: ' + (err instanceof Error ? err.message : String(err)));
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -304,15 +334,44 @@ export default function AdminUsersPage() {
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => {
-                        setSelectedRole(user.role);
-                        setEditingUser(user.id);
-                      }}
-                      className="text-purple-600 hover:text-purple-900 text-sm"
-                    >
-                      Change Role
-                    </button>
+                    <div className="flex flex-col items-end space-y-2">
+                      <button
+                        onClick={() => {
+                          setSelectedRole(user.role);
+                          setEditingUser(user.id);
+                        }}
+                        className="text-purple-600 hover:text-purple-900 text-sm"
+                      >
+                        Change Role
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Delete user ${user.name} <${user.email}>? This action cannot be undone.`)) return;
+                          try {
+                            setIsLoading(true);
+                            setError(null);
+                            const res = await fetch('/api/admin/users', {
+                              method: 'DELETE',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ userId: user.id }),
+                            });
+                            if (!res.ok) {
+                              const err = await res.json();
+                              throw new Error(err?.error || 'Failed to delete user');
+                            }
+                            setUsers(prev => prev.filter(u => u.id !== user.id));
+                            setSuccessMessage(`User ${user.name} deleted`);
+                          } catch (err) {
+                            setError('Error deleting user: ' + (err instanceof Error ? err.message : String(err)));
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-900 text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

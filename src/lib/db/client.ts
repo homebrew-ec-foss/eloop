@@ -1,27 +1,46 @@
 import { createClient } from '@libsql/client';
+import { config as loadDotenv } from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+
+// Ensure common .env files are read when running in environments where
+// We try in order but do not override any already-present env vars.
+const envFiles = ['.env', '.env.local', '.env.development', '.env.development.local'];
+for (const f of envFiles) {
+  const p = path.resolve(process.cwd(), f);
+  if (fs.existsSync(p)) {
+    try {
+      loadDotenv({ path: p, override: false });
+    } catch (e) {
+    }
+  }
+}
+
+// Read and validate Turso environment variables early and fail fast
+const TURSO_URL = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL;
+const TURSO_AUTH = process.env.TURSO_AUTH_TOKEN;
+
+if (!TURSO_URL) {
+  throw new Error(
+    'TURSO_DATABASE_URL (or DATABASE_URL) environment variable is not set.\n' +
+      'Provide this via your environment, a .env.local file, .env.development.local, or Vercel project settings.'
+  );
+}
+
+if (!TURSO_AUTH) {
+  console.warn('Warning: TURSO_AUTH_TOKEN is not set. Authenticated operations may fail.');
+}
 
 // Initialize Turso client
 export const turso = createClient({
-  url: process.env.TURSO_DATABASE_URL || '',
-  authToken: process.env.TURSO_AUTH_TOKEN || '',
+  url: TURSO_URL,
+  authToken: TURSO_AUTH || undefined,
 });
 
-// Run database initialization on import
-(async () => {
-  try {
-    // Check if tables exist
-    const checkEventsTable = await turso.execute(`
-      SELECT name FROM sqlite_master WHERE type='table' AND name='events'
-    `);
-    
-    if (checkEventsTable.rows.length === 0) {
-      console.log('Database tables not found. Auto-initializing...');
-      await initDatabase();
-    }
-  } catch (error) {
-    console.error('Error checking database on startup:', error);
-  }
-})();
+// NOTE: Do NOT run initialization on import. Initialization is handled
+// explicitly by `scripts/check-and-init-db.js` during build or by calling
+// `initDatabase()` from a controlled bootstrap path. Avoiding network calls
+// during module import prevents unexpected behavior during builds.
 
 // Create or get Turso tables
 export async function initDatabase() {

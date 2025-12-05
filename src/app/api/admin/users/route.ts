@@ -103,3 +103,42 @@ export async function PUT(request: Request) {
     );
   }
 }
+
+// Delete a user (admin only)
+export async function DELETE(request: Request) {
+  try {
+    const session = await auth();
+
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    if (session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { userId } = body;
+
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    }
+
+    // Prevent admins from deleting themselves
+    if (userId === session.user.id) {
+      return NextResponse.json({ error: 'Cannot delete your own user account' }, { status: 400 });
+    }
+
+    const { deleteUser } = await import('@/lib/db/user');
+    const deleted = await deleteUser(userId);
+
+    if (!deleted) {
+      return NextResponse.json({ error: 'User not found or could not be deleted' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+  }
+}

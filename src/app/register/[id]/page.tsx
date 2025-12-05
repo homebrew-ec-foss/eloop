@@ -34,6 +34,23 @@ export default function EventRegistrationPage({ params }: PageParams) {
   // Block rendering if user is not authenticated
   const [blocked, setBlocked] = useState(false);
 
+  // Approval message template controlled via env (client-accessible via NEXT_PUBLIC_*)
+  const approvalTemplate =
+    process.env.NEXT_PUBLIC_APPROVAL_MESSAGE ||
+    "You will receive an email at <strong>{email}</strong> once your application is approved. If selected, submit the payment screenshots when requested. After approval by the organizer, your QR code will appear here and you can show up to the event";
+
+  const escapeHtml = (unsafe?: string) => {
+    if (!unsafe) return '';
+    return unsafe
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  const approvalMessageHtml = approvalTemplate.replace('{email}', escapeHtml(session?.user?.email || ''));
+
   // Redirect to sign-in if not authenticated
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -365,7 +382,7 @@ export default function EventRegistrationPage({ params }: PageParams) {
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6">
           <h2 className="text-xl font-bold mb-2">Registration Successful!</h2>
           <p>You have successfully registered for {event.name}.</p>
-          <p className="mt-2 text-sm">You will receive an email at <strong>{session?.user?.email}</strong> once your application is approved. If selected, submit the payment screenshots when requested. After approval by the organizer, your QR code will appear here and you can show up to the event</p>
+          <p className="mt-2 text-sm" dangerouslySetInnerHTML={{ __html: approvalMessageHtml }} />
           <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-3 mt-3">
             <p className="text-amber-800 text-sm mb-1">If approved you&apos;ll be a participant and can check in at the event.</p>
             <p className="text-amber-800 text-sm font-semibold">Refresh to see changes.</p>

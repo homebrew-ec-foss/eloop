@@ -22,6 +22,23 @@ export default function UnifiedDashboard() {
   const [registeredEventName, setRegisteredEventName] = useState<string>('');
   const [hasRegistration, setHasRegistration] = useState(false);
 
+  // Approval message template controlled via env (client-accessible via NEXT_PUBLIC_*)
+  const approvalTemplate =
+    process.env.NEXT_PUBLIC_APPROVAL_MESSAGE ||
+    "You will receive an email at <strong>{email}</strong> once your application is approved. If selected, submit the payment screenshots when requested. After approval by the organizer, your QR code will appear here and you can show up to the event";
+
+  const escapeHtml = (unsafe?: string) => {
+    if (!unsafe) return '';
+    return unsafe
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  const approvalMessageHtml = approvalTemplate.replace('{email}', escapeHtml(session?.user?.email || ''));
+
   // Check if user has any registration
   useEffect(() => {
     const checkRegistration = async () => {
@@ -192,9 +209,7 @@ export default function UnifiedDashboard() {
                 <p className="text-green-800 mb-2">
                   You have successfully registered for <strong>{registeredEventName}</strong>
                 </p>
-                <p className="text-green-700 text-sm">
-                  You will receive an email at <strong>{session?.user?.email}</strong> once your application is approved. If selected, submit the payment screenshots when requested. After approval by the organizer, your QR code will appear here and you can show up to the event
-                </p>
+                <p className="text-green-700 text-sm" dangerouslySetInnerHTML={{ __html: approvalMessageHtml }} />
                 <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-3 mt-3">
                   <p className="text-amber-800 text-sm mb-1">If approved you&apos;ll be a participant and can check in at the event.</p>
                   <p className="text-amber-800 text-sm font-semibold">Refresh to see changes.</p>
@@ -220,11 +235,9 @@ export default function UnifiedDashboard() {
             <h2 className="text-xl md:text-2xl font-bold text-amber-900">Welcome!</h2>
           </div>
           <p className="text-amber-800 mb-2">
-            Browse and register for events. If approved you&apos;ll be a participant and can check in.
+            Browse and register for events. If approved you&apos;ll be a participant and can check in at the event.
           </p>
-          <p className="text-amber-700 text-sm mt-2">
-            You will receive an email at <strong>{session?.user?.email}</strong> once your application is approved. If selected, submit the payment screenshots when requested. After approval by the organizer, your QR code will appear here and you can show up to the event
-          </p>
+          <p className="text-amber-700 text-sm mt-2" dangerouslySetInnerHTML={{ __html: approvalMessageHtml }} />
         </div>
 
         {/* Show latest event only if user hasn't registered yet */}

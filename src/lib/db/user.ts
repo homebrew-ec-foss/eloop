@@ -190,3 +190,37 @@ export async function countUsers(): Promise<number> {
 
   return Number(result.rows[0]?.count || 0);
 }
+
+// Delete a user by id. Returns true if a row was deleted.
+export async function deleteUser(userId: string): Promise<boolean> {
+  // First, remove registrations that belong to this user
+  try {
+    await turso.execute({
+      sql: `DELETE FROM registrations WHERE user_id = ?`,
+      args: [userId],
+    });
+  } catch (e) {
+    console.error('Failed to delete registrations for user:', e);
+    // continue to attempt deleting the user record anyway
+  }
+
+  const result = await turso.execute({
+    sql: `DELETE FROM users WHERE id = ?`,
+    args: [userId]
+  });
+
+  // `result` shape may vary; check rowsAffected or similar if available
+  try {
+    // @ts-ignore
+    if (typeof result.rowsAffected === 'number') {
+      // rowsAffected available
+      return result.rowsAffected > 0;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  // Fallback: attempt to query the user
+  const existing = await getUserById(userId);
+  return existing === null;
+}
