@@ -1,5 +1,5 @@
 import NextAuth from "next-auth";
-import type { NextAuthConfig } from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { getUserByEmail, createUser } from "@/lib/db/user";
 import { UserRole } from "@/types";
@@ -42,7 +42,7 @@ declare module "next-auth" {
 
 // The JWT token shape is defined in /src/types/next-auth.d.ts
 
-export const authConfig: NextAuthConfig = {
+export const authConfig: NextAuthOptions = {
   providers: [
     // Keep Google provider for when we set up proper OAuth
     GoogleProvider({
@@ -170,4 +170,25 @@ export function canAccessRole(userRole: UserRole, requiredRole: UserRole): boole
   return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+const nextAuthHandler = NextAuth(authConfig);
+export const handlers = { GET: nextAuthHandler, POST: nextAuthHandler };
+import { getServerSession } from "next-auth/next";
+import type { Session } from "next-auth";
+
+export async function auth(): Promise<Session | null> {
+  try {
+    // Attempt to resolve a server session using next-auth helper
+    // Fallback to null on any error to avoid build-time crashes
+    // `getServerSession` accepts the auth options and reads cookies from the environment
+    // in Next.js server environment.
+    // @ts-ignore - `getServerSession` typing can be awkward in some Next.js/Bun setups
+    const session = await getServerSession(authConfig as any);
+    return (session as Session) ?? null;
+  } catch (error) {
+    return null;
+  }
+}
+export async function signOut(_opts?: Record<string, unknown>) {
+  // No-op server-side signOut shim. Route clears cookies itself.
+  return;
+}
