@@ -23,7 +23,7 @@
     "next": "^16.0.10",
     "next-auth": "^4.24.13",
     "posthog-js": "^1.306.1",
-    "posthog-node": "^5.17.2",
+    "posthog-node": "^5.17.3",
     "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.3",
