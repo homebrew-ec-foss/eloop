@@ -15,6 +15,7 @@ interface EventDetails {
   checkpoints?: string[];
   unlockedCheckpoints?: string[];
   isRegistrationOpen?: boolean;
+  isTeamFormationOpen?: boolean;
   formSchema?: {
     fields: Array<{
       id: string;
@@ -233,6 +234,32 @@ export default function EventPage({ params }: PageParams) {
     }
   };
 
+  const handleTeamFormationToggle = async (currentlyOpen: boolean) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}/toggle-team-formation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isOpen: !currentlyOpen }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to toggle team formation');
+      }
+
+      const data = await response.json();
+
+      // Update local state
+      setEvent(prev => prev ? {
+        ...prev,
+        isTeamFormationOpen: data.event.isTeamFormationOpen
+      } : null);
+    } catch (err) {
+      console.error('Error toggling team formation:', err);
+      alert(`Failed to toggle team formation: ${(err as Error).message}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="mx-6 py-12">
@@ -350,6 +377,47 @@ export default function EventPage({ params }: PageParams) {
         </div>
       </div>
 
+      {/* Team Management & Scoring - Only for Organizers/Admins */}
+      {session?.user?.role && ['admin', 'organizer'].includes(session.user.role) && (
+        <div className="mx-6 bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-slate-900">Team Management</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Manage team formation, scoring rounds, and view team leaderboards
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Link
+              href={`/dashboard/team-management/${event.id}`}
+              className="flex items-center justify-between px-4 py-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              <span className="font-medium text-slate-900">Team Formation</span>
+              <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+            <Link
+              href={`/dashboard/team-scores/${event.id}`}
+              className="flex items-center justify-between px-4 py-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              <span className="font-medium text-slate-900">Scores & Rounds</span>
+              <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+            <Link
+              href={`/dashboard/tally/${event.id}`}
+              className="flex items-center justify-between px-4 py-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              <span className="font-medium text-slate-900">Final Tally</span>
+              <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Checkpoint Access Control - Only for Organizers/Admins */}
       {session?.user?.role && ['admin', 'organizer'].includes(session.user.role) &&
         event.checkpoints && event.checkpoints.length > 0 && (
@@ -418,6 +486,21 @@ export default function EventPage({ params }: PageParams) {
               <span className="font-semibold text-slate-900">Accept New Registrations</span>
               <span className={`ml-3 text-sm font-medium ${event.isRegistrationOpen ?? true ? 'text-emerald-600' : 'text-rose-600'}`}>
                 {event.isRegistrationOpen ?? true ? '✓ Open' : '✗ Closed'}
+              </span>
+            </div>
+          </label>
+
+          <label className="flex items-center p-4 border-2 border-purple-200 bg-purple-50 rounded-xl cursor-pointer">
+            <input
+              type="checkbox"
+              checked={event.isTeamFormationOpen ?? false}
+              onChange={() => handleTeamFormationToggle(event.isTeamFormationOpen ?? false)}
+              className="h-5 w-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500 cursor-pointer"
+            />
+            <div className="ml-4 flex-1">
+              <span className="font-semibold text-slate-900">Form Teams</span>
+              <span className={`ml-3 text-sm font-medium ${event.isTeamFormationOpen ?? false ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {event.isTeamFormationOpen ?? false ? '✓ Open' : '✗ Closed'}
               </span>
             </div>
           </label>

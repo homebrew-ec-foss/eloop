@@ -22,6 +22,7 @@ export default function AdminUsersPage() {
     { key: 'applicant', label: 'Applicants', count: users.filter(u => u.role === 'applicant').length },
     { key: 'participant', label: 'Participants', count: users.filter(u => u.role === 'participant').length },
     { key: 'organizer', label: 'Organizers', count: users.filter(u => u.role === 'organizer').length },
+    { key: 'mentor', label: 'Mentors', count: users.filter(u => u.role === 'mentor').length },
     { key: 'volunteer', label: 'Volunteers', count: users.filter(u => u.role === 'volunteer').length },
     { key: 'admin', label: 'Admins', count: users.filter(u => u.role === 'admin').length },
   ];
@@ -110,6 +111,7 @@ export default function AdminUsersPage() {
     switch (role) {
       case 'admin': return 'bg-purple-500';
       case 'organizer': return 'bg-blue-500';
+      case 'mentor': return 'bg-indigo-500';
       case 'volunteer': return 'bg-teal-500';
       case 'participant': return 'bg-green-500';
       case 'applicant': return 'bg-amber-500';
@@ -157,8 +159,8 @@ export default function AdminUsersPage() {
                 key={option.key}
                 onClick={() => setRoleFilter(option.key)}
                 className={`px-3 py-2 rounded-full text-sm font-medium border transition ${active
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                    : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-200'
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-200'
                   }`}
               >
                 {option.label} ({option.count})
@@ -205,6 +207,7 @@ export default function AdminUsersPage() {
                         >
                           <option value="applicant">Applicant</option>
                           <option value="participant">Participant</option>
+                          <option value="mentor">Mentor</option>
                           <option value="volunteer">Volunteer</option>
                           <option value="organizer">Organizer</option>
                           <option value="admin">Admin</option>
@@ -291,6 +294,7 @@ export default function AdminUsersPage() {
                       >
                         <option value="applicant">Applicant</option>
                         <option value="participant">Participant</option>
+                        <option value="mentor">Mentor</option>
                         <option value="volunteer">Volunteer</option>
                         <option value="organizer">Organizer</option>
                         <option value="admin">Admin</option>

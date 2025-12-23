@@ -3,8 +3,8 @@
   "version": "0.5.0",
   "private": true,
   "scripts": {
-    "dev": "bunx tsx scripts/check-and-init-db.js && bun run --bun next dev",
-    "build": "bunx tsx scripts/check-and-init-db.js && bun run --bun next build",
+    "dev": "bun run scripts/check-and-init-db.js && bun run --bun next dev",
+    "build": "bun run scripts/check-and-init-db.js && bun run --bun next build",
     "lint": "eslint"
   },
   "dependencies": {

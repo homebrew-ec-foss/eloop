@@ -23,7 +23,7 @@ const TURSO_AUTH = process.env.TURSO_AUTH_TOKEN;
 if (!TURSO_URL) {
   throw new Error(
     'TURSO_DATABASE_URL (or DATABASE_URL) environment variable is not set.\n' +
-      'Provide this via your environment, a .env.local file, .env.development.local, or Vercel project settings.'
+    'Provide this via your environment, a .env.local file, .env.development.local, or Vercel project settings.'
   );
 }
 
@@ -95,6 +95,53 @@ export async function initDatabase() {
         FOREIGN KEY(user_id) REFERENCES users(id),
         FOREIGN KEY(approved_by) REFERENCES users(id),
         FOREIGN KEY(rejected_by) REFERENCES users(id)
+      )
+    `);
+
+    // Teams table - groups of participants with a team name
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS teams (
+        id TEXT PRIMARY KEY,
+        event_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        member_ids TEXT NOT NULL, -- JSON array of user IDs (team members)
+        created_by TEXT NOT NULL, -- mentor who created the team
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY(event_id) REFERENCES events(id),
+        FOREIGN KEY(created_by) REFERENCES users(id)
+      )
+    `);
+
+    // Scoring rounds table - defines review rounds (e.g., "Round 1 Review", "Round 2 Review")
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS scoring_rounds (
+        id TEXT PRIMARY KEY,
+        event_id TEXT NOT NULL,
+        name TEXT NOT NULL, -- e.g., "Round 1 Review", "Round 2 Review"
+        round_number INTEGER NOT NULL, -- ordering of rounds
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY(event_id) REFERENCES events(id)
+      )
+    `);
+
+    // Team scores table - stores scores for teams in each round
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS team_scores (
+        id TEXT PRIMARY KEY,
+        team_id TEXT NOT NULL,
+        scoring_round_id TEXT NOT NULL,
+        score REAL, -- numeric score (can be null if not yet graded)
+        graded_by TEXT, -- mentor who graded the team
+        graded_at INTEGER, -- when the team was graded
+        notes TEXT, -- optional notes from mentor
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        UNIQUE(team_id, scoring_round_id),
+        FOREIGN KEY(team_id) REFERENCES teams(id),
+        FOREIGN KEY(scoring_round_id) REFERENCES scoring_rounds(id),
+        FOREIGN KEY(graded_by) REFERENCES users(id)
       )
     `);
 

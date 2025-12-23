@@ -47,16 +47,16 @@ async function checkAndInitDb() {
   });
 
   console.log('Turso client created');
-  
+
   // Check if tables exist
   try {
     const checkEventsTable = await turso.execute(`
       SELECT name FROM sqlite_master WHERE type='table' AND name='events'
     `);
-    
+
     if (checkEventsTable.rows.length === 0) {
       console.log('Database tables not found. Initializing...');
-      
+
       // Create tables
       await turso.execute(`
         CREATE TABLE IF NOT EXISTS users (
@@ -86,6 +86,7 @@ async function checkAndInitDb() {
           checkpoints TEXT DEFAULT '["Registration"]',
           unlocked_checkpoints TEXT DEFAULT '[]',
           is_registration_open INTEGER DEFAULT 1,
+          is_team_formation_open INTEGER DEFAULT 0,
           form_schema TEXT NOT NULL,
           created_at INTEGER NOT NULL,
           updated_at INTEGER NOT NULL,
@@ -118,7 +119,7 @@ async function checkAndInitDb() {
           FOREIGN KEY(rejected_by) REFERENCES users(id)
         )
       `);
-      
+
       // Scan logs table
       await turso.execute(`
         CREATE TABLE IF NOT EXISTS scan_logs (
@@ -136,29 +137,76 @@ async function checkAndInitDb() {
           FOREIGN KEY (volunteer_id) REFERENCES users(id)
         )
       `);
-      
+
+      // Teams table
+      await turso.execute(`
+        CREATE TABLE IF NOT EXISTS teams (
+          id TEXT PRIMARY KEY,
+          event_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          member_ids TEXT NOT NULL,
+          created_by TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          FOREIGN KEY (event_id) REFERENCES events(id),
+          FOREIGN KEY (created_by) REFERENCES users(id)
+        )
+      `);
+
+      // Scoring rounds table
+      await turso.execute(`
+        CREATE TABLE IF NOT EXISTS scoring_rounds (
+          id TEXT PRIMARY KEY,
+          event_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          round_number INTEGER NOT NULL,
+          grading_form_schema TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          FOREIGN KEY (event_id) REFERENCES events(id)
+        )
+      `);
+
+      // Team scores table
+      await turso.execute(`
+        CREATE TABLE IF NOT EXISTS team_scores (
+          id TEXT PRIMARY KEY,
+          team_id TEXT NOT NULL,
+          scoring_round_id TEXT NOT NULL,
+          score REAL,
+          graded_by TEXT,
+          graded_at INTEGER,
+          notes TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          FOREIGN KEY (team_id) REFERENCES teams(id),
+          FOREIGN KEY (scoring_round_id) REFERENCES scoring_rounds(id),
+          FOREIGN KEY (graded_by) REFERENCES users(id)
+        )
+      `);
+
       // Create indexes
       await turso.execute(`
         CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)
       `);
-      
+
       await turso.execute(`
         CREATE INDEX IF NOT EXISTS idx_scan_logs_event_id ON scan_logs(event_id)
       `);
-      
+
       await turso.execute(`
         CREATE INDEX IF NOT EXISTS idx_scan_logs_volunteer_id ON scan_logs(volunteer_id)
       `);
-      
+
       await turso.execute(`
         CREATE INDEX IF NOT EXISTS idx_scan_logs_status ON scan_logs(scan_status)
       `);
-      
+
       console.log('Database tables and indexes created successfully');
     } else {
       console.log('Database tables already exist');
     }
-    
+
     return true;
   } catch (error) {
     console.error('Error checking/creating tables:', error);

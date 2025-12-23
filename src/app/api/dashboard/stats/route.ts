@@ -12,7 +12,7 @@ import { turso } from '@/lib/db/client';
 export async function GET() {
   try {
     const session = await auth();
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -27,10 +27,10 @@ export async function GET() {
     if (role === 'admin') {
       const events = await getAllEvents();
       const users = await getAllUsers();
-      
+
       let totalRegistrations = 0;
       let pendingApprovals = 0;
-      
+
       for (const event of events) {
         const regs = await getEventRegistrations(event.id);
         totalRegistrations += regs.length;
@@ -48,10 +48,10 @@ export async function GET() {
         const failedScansResult = await turso.execute({
           sql: `SELECT COUNT(*) as count FROM scan_logs WHERE scan_status != 'success'`
         });
-          failedScans = Number(failedScansResult.rows[0]?.count || 0);
-        } catch {
-          console.log('scan_logs table not found, defaulting to 0');
-        }      return NextResponse.json({
+        failedScans = Number(failedScansResult.rows[0]?.count || 0);
+      } catch {
+        console.log('scan_logs table not found, defaulting to 0');
+      } return NextResponse.json({
         role: 'admin',
         events: events.length,
         users: users.length,
@@ -69,10 +69,10 @@ export async function GET() {
     if (role === 'organizer') {
       const events = await getOrganizerEvents(userId);
       const volunteers = await getOrganizerVolunteers(userId);
-      
+
       let pendingRegistrations = 0;
       let approvedRegistrations = 0;
-      
+
       for (const event of events) {
         const regs = await getEventRegistrations(event.id);
         pendingRegistrations += regs.filter(r => r.status === 'pending').length;
@@ -82,7 +82,7 @@ export async function GET() {
       // Count failed scans for organizer's events
       const eventIds = events.map(e => e.id);
       let failedScans = 0;
-      
+
       if (eventIds.length > 0) {
         try {
           const placeholders = eventIds.map(() => '?').join(',');
@@ -109,12 +109,12 @@ export async function GET() {
     // Volunteer dashboard stats
     if (role === 'volunteer') {
       const events = await getAllEvents();
-      
+
       // Get all checked-in registrations and count those checked in by this volunteer
       const checkInsResult = await turso.execute({
         sql: `SELECT checkpoint_checkins FROM registrations WHERE status = 'checked-in'`
       });
-      
+
       let checkIns = 0;
       for (const row of checkInsResult.rows) {
         const checkpoints = JSON.parse(row.checkpoint_checkins as string || '[]');
@@ -136,7 +136,7 @@ export async function GET() {
     if (role === 'participant') {
       const registrations = await getUserRegistrations(userId);
       const events = await getAllEvents();
-      
+
       const approved = registrations.filter(r => r.status === 'approved').length;
       const pending = registrations.filter(r => r.status === 'pending').length;
 
@@ -154,6 +154,12 @@ export async function GET() {
       return NextResponse.json({
         role: 'applicant',
         message: 'Your account is pending approval'
+      });
+    }
+    if (role === 'mentor') {
+      return NextResponse.json({
+        role: 'mentor',
+        message: 'Welcome, Mentor! Access team management from the event details page.'
       });
     }
 

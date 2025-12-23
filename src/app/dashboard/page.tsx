@@ -18,6 +18,7 @@ export default function UnifiedDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [latestEvent, setLatestEvent] = useState<any>(null);
+  const [allEvents, setAllEvents] = useState<any[]>([]);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [registeredEventName, setRegisteredEventName] = useState<string>('');
   const [hasRegistration, setHasRegistration] = useState(false);
@@ -118,12 +119,34 @@ export default function UnifiedDashboard() {
     if (status === 'authenticated') {
       fetchStats();
 
-      // Fetch latest event for applicants
-      if (session?.user?.role === 'applicant') {
-        fetchLatestEvent();
+      // Fetch events for mentors and applicants
+      if (session?.user?.role === 'applicant' || session?.user?.role === 'mentor') {
+        fetchAllEvents();
       }
     }
   }, [status, router, session?.user?.role]);
+
+  const fetchAllEvents = async () => {
+    try {
+      const res = await fetch('/api/events');
+      if (!res.ok) return;
+      const data = await res.json();
+      const events = data.events || [];
+      setAllEvents(events);
+
+      // Also set latest event for applicants
+      if (session?.user?.role === 'applicant' && events.length > 0) {
+        const sortedEvents = [...events].sort((a: any, b: any) => {
+          const dateA = new Date(a.date);
+          const dateB = new Date(b.date);
+          return dateB.getTime() - dateA.getTime();
+        });
+        setLatestEvent(sortedEvents[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -155,10 +178,10 @@ export default function UnifiedDashboard() {
       const res = await fetch('/api/events');
       if (!res.ok) return;
       const data = await res.json();
-      const allEvents = data.events || [];
+      const events = data.events || [];
 
       // Sort by date, get the latest
-      const sortedEvents = [...allEvents].sort((a: any, b: any) => {
+      const sortedEvents = [...events].sort((a: any, b: any) => {
         const dateA = new Date(a.date);
         const dateB = new Date(b.date);
         return dateB.getTime() - dateA.getTime();
@@ -378,6 +401,52 @@ export default function UnifiedDashboard() {
 
         {/* User Registration Section - Shows QR and checkpoint status */}
         <UserRegistrationsSection />
+      </div>
+    );
+  }
+
+  // Mentor Dashboard
+  if (role === 'mentor') {
+    return (
+      <div className="space-y-6 md:space-y-8">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Mentor</p>
+            <h2 className="text-2xl font-semibold text-slate-900">Select Event</h2>
+            <p className="text-slate-600 mt-1">Choose an event to begin managing teams.</p>
+          </div>
+        </div>
+
+        {allEvents.length === 0 ? (
+          <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-12 text-center shadow-sm">
+            <p className="text-slate-600">No events available at this time.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            {allEvents.map(event => (
+              <Link
+                key={event.id}
+                href={`/dashboard/team-management/${event.id}`}
+                className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group"
+              >
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{event.name}</h3>
+                  <p className="text-sm text-slate-600 line-clamp-2">{event.description}</p>
+                  <div className="pt-2 space-y-1">
+                    <p className="text-xs text-slate-500">
+                      📅 {new Date(event.date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
+                    <p className="text-xs text-slate-500">📍 {event.location}</p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     );
   }

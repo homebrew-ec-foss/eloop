@@ -12,7 +12,7 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth();
-    
+
     // User must be logged in
     if (!session?.user) {
       return NextResponse.json(
@@ -20,30 +20,30 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         { status: 401 }
       );
     }
-    
+
     // Wait for params to resolve before accessing id
     const resolvedParams = await params;
     const eventId = resolvedParams.id;
-    
+
     if (!eventId) {
       return NextResponse.json(
         { error: 'Event ID is required' },
         { status: 400 }
       );
     }
-    
+
     console.log(`Fetching event with ID: ${eventId}`);
     const event = await getEventById(eventId);
-    
+
     if (!event) {
       return NextResponse.json(
         { error: 'Event not found' },
         { status: 404 }
       );
     }
-    
+
     // Return event data
-    return NextResponse.json({ 
+    return NextResponse.json({
       event: {
         id: event.id,
         name: event.name,
@@ -58,8 +58,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         formSchema: event.formSchema,
         checkpoints: event.checkpoints,
         unlockedCheckpoints: event.unlockedCheckpoints,
-        isRegistrationOpen: event.isRegistrationOpen
-      } 
+        isRegistrationOpen: event.isRegistrationOpen,
+        isTeamFormationOpen: event.isTeamFormationOpen
+      }
     });
   } catch (error) {
     console.error('Error fetching event:', error);

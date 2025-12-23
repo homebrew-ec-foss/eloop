@@ -44,6 +44,7 @@ const getRoleConfig = (role: UserRole) => {
             title: 'Management',
             items: [
               { href: '/dashboard/volunteers', label: 'Volunteer Management' },
+              { href: '/dashboard/mentors', label: 'Mentor Management' },
             ],
           },
         ],
@@ -73,6 +74,20 @@ const getRoleConfig = (role: UserRole) => {
             items: [
               { href: '/dashboard', label: 'Home' },
               { href: '/dashboard/events', label: 'Browse Events' },
+            ],
+          },
+        ],
+      };
+    case 'mentor':
+      return {
+        title: 'Mentor Dashboard',
+        colorScheme: 'rose' as const,
+        roleLabel: 'Mentor',
+        navigation: [
+          {
+            title: 'Overview',
+            items: [
+              { href: '/dashboard', label: 'Dashboard' },
             ],
           },
         ],

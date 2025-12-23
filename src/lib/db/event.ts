@@ -17,6 +17,7 @@ function rowToEvent(row: Record<string, unknown>): Event {
     checkpoints: row.checkpoints ? JSON.parse(row.checkpoints as string) : ["Registration"],
     unlockedCheckpoints: row.unlocked_checkpoints ? JSON.parse(row.unlocked_checkpoints as string) : ["Registration"],
     isRegistrationOpen: row.is_registration_open !== undefined ? Boolean(row.is_registration_open) : true,
+    isTeamFormationOpen: row.is_team_formation_open !== undefined ? Boolean(row.is_team_formation_open) : false,
     formSchema: JSON.parse(row.form_schema as string) as FormSchema,
     createdAt: new Date(row.created_at as number),
     updatedAt: new Date(row.updated_at as number)
@@ -38,16 +39,16 @@ export async function createEvent(event: Omit<Event, 'id' | 'createdAt' | 'updat
       checkpoints: event.checkpoints,
       formSchema: JSON.stringify(event.formSchema).substring(0, 100) + '...'
     });
-    
+
     const now = Date.now();
     const id = crypto.randomUUID();
-    
+
     // Make sure formSchema has an eventId
     const formSchema = {
       ...event.formSchema,
       eventId: id
     };
-    
+
     await turso.execute({
       sql: `
         INSERT INTO events (id, name, description, date, start_date, end_date, registration_close_date, location, image_url, organizer_id, checkpoints, unlocked_checkpoints, is_registration_open, form_schema, created_at, updated_at)
@@ -72,9 +73,9 @@ export async function createEvent(event: Omit<Event, 'id' | 'createdAt' | 'updat
         now
       ]
     });
-    
+
     console.log('Event created successfully with ID:', id);
-    
+
     return {
       ...event,
       id,
@@ -154,37 +155,37 @@ export async function updateEvent(eventId: string, eventData: Partial<Omit<Event
     updates.push('name = ?');
     args.push(eventData.name);
   }
-  
+
   if (eventData.description) {
     updates.push('description = ?');
     args.push(eventData.description);
   }
-  
+
   if (eventData.date) {
     updates.push('date = ?');
     args.push(eventData.date.getTime());
   }
-  
+
   if (eventData.location) {
     updates.push('location = ?');
     args.push(eventData.location);
   }
-  
+
   if (eventData.formSchema) {
     updates.push('form_schema = ?');
     args.push(JSON.stringify(eventData.formSchema));
   }
-  
+
   if (updates.length === 0) {
     return event;
   }
-  
+
   const now = Date.now();
   updates.push('updated_at = ?');
   args.push(now);
-  
+
   args.push(eventId);
-  
+
   await turso.execute({
     sql: `
       UPDATE events 
@@ -193,7 +194,7 @@ export async function updateEvent(eventId: string, eventData: Partial<Omit<Event
     `,
     args
   });
-  
+
   return getEventById(eventId);
 }
 
@@ -204,13 +205,13 @@ export async function deleteEvent(eventId: string): Promise<boolean> {
     sql: `DELETE FROM registrations WHERE event_id = ?`,
     args: [eventId]
   });
-  
+
   // Then delete the event
   const result = await turso.execute({
     sql: `DELETE FROM events WHERE id = ?`,
     args: [eventId]
   });
-  
+
   return result.rowsAffected > 0;
 }
 
@@ -218,27 +219,27 @@ export async function deleteEvent(eventId: string): Promise<boolean> {
 export async function unlockCheckpoint(eventId: string, checkpoint: string): Promise<Event | null> {
   const event = await getEventById(eventId);
   if (!event) return null;
-  
+
   const unlockedCheckpoints = event.unlockedCheckpoints || ["Registration"];
-  
+
   // Check if checkpoint exists in event's checkpoint list
   if (!event.checkpoints?.includes(checkpoint)) {
     throw new Error('Checkpoint does not exist in this event');
   }
-  
+
   // Check if already unlocked
   if (unlockedCheckpoints.includes(checkpoint)) {
     return event; // Already unlocked
   }
-  
+
   // Add to unlocked list
   unlockedCheckpoints.push(checkpoint);
-  
+
   await turso.execute({
     sql: `UPDATE events SET unlocked_checkpoints = ?, updated_at = ? WHERE id = ?`,
     args: [JSON.stringify(unlockedCheckpoints), Date.now(), eventId]
   });
-  
+
   return getEventById(eventId);
 }
 
@@ -246,16 +247,16 @@ export async function unlockCheckpoint(eventId: string, checkpoint: string): Pro
 export async function lockCheckpoint(eventId: string, checkpoint: string): Promise<Event | null> {
   const event = await getEventById(eventId);
   if (!event) return null;
-  
+
   const unlockedCheckpoints = event.unlockedCheckpoints || ["Registration"];
-  
+
   // Remove from unlocked list
   const updatedUnlocked = unlockedCheckpoints.filter(cp => cp !== checkpoint);
-  
+
   await turso.execute({
     sql: `UPDATE events SET unlocked_checkpoints = ?, updated_at = ? WHERE id = ?`,
     args: [JSON.stringify(updatedUnlocked), Date.now(), eventId]
   });
-  
+
   return getEventById(eventId);
 }

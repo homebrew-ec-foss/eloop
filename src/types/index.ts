@@ -1,5 +1,5 @@
 // Define role types
-export type UserRole = 'admin' | 'organizer' | 'volunteer' | 'participant' | 'applicant';
+export type UserRole = 'admin' | 'organizer' | 'volunteer' | 'participant' | 'applicant' | 'mentor';
 
 // User profile structure
 export interface UserProfile {
@@ -27,6 +27,7 @@ export interface Event {
   checkpoints?: string[];
   unlockedCheckpoints?: string[]; // Checkpoints that are currently unlocked for scanning
   isRegistrationOpen?: boolean; // Whether new registrations are accepted
+  isTeamFormationOpen?: boolean; // Whether mentors can form teams for this event
   formSchema: FormSchema;
   createdAt: Date;
   updatedAt: Date;
@@ -42,7 +43,7 @@ export interface FormSchema {
 }
 
 // Form field types
-export type FieldType = 'text' | 'number' | 'email' | 'select' | 'multiselect' | 'checkbox' | 'date' | 'time';
+export type FieldType = 'text' | 'number' | 'email' | 'select' | 'multiselect' | 'checkbox' | 'date' | 'time' | 'slider' | 'textarea';
 
 export interface FormField {
   id: string;
@@ -53,6 +54,7 @@ export interface FormField {
   order: number;
   options?: string[]; // For select and multiselect fields
   placeholder?: string;
+  weight?: number; // Weight for scoring (only for number/slider fields)
   useUserProfile?: boolean; // Whether to pull this field from user profile data
   userProfileField?: 'name' | 'email' | 'custom'; // Which field from the user profile to use
   validation?: {
@@ -114,4 +116,50 @@ export interface ScanLog {
   userName?: string; // For display
   registrationId?: string; // If registration was found
   createdAt: Date;
+}
+
+// Team structure - groups of participants
+export interface Team {
+  id: string;
+  eventId: string;
+  name: string;
+  memberIds: string[]; // User IDs of team members
+  createdBy: string; // Mentor who created the team
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Scoring round structure - defines review rounds for an event
+export interface ScoringRound {
+  id: string;
+  eventId: string;
+  name: string; // e.g., "Round 1 Review", "Round 2 Review"
+  roundNumber: number; // ordering of rounds
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Team score structure - stores score for a team in a specific round
+export interface TeamScore {
+  id: string;
+  teamId: string;
+  scoringRoundId: string;
+  score?: number; // numeric score (can be null if not yet graded)
+  gradedBy?: string; // mentor who graded the team
+  gradedAt?: Date; // when the team was graded
+  notes?: string; // optional notes from mentor
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Team details with member info (for display)
+export interface TeamWithMembers extends Team {
+  members: UserProfile[]; // Full user profiles of team members
+  createdByName?: string; // Name of mentor who created the team
+}
+
+// Team score with round info (for dashboard display)
+export interface TeamScoreWithRound extends TeamScore {
+  round?: ScoringRound;
+  team?: Team;
 }

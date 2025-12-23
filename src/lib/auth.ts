@@ -14,11 +14,11 @@ const validateEnv = () => {
     'TURSO_DATABASE_URL',
     'TURSO_AUTH_TOKEN'
   ];
-  
+
   const missingVars = requiredEnvVars.filter(
     envVar => !process.env[envVar]
   );
-  
+
   if (missingVars.length > 0) {
     console.error(`Missing required environment variables: ${missingVars.join(', ')}`);
   } else {
@@ -76,18 +76,18 @@ export const authConfig: NextAuthOptions = {
         try {
           console.log("Fetching user from database:", user.email);
           let dbUser = await getUserByEmail(user.email!);
-          
+
           // If it's a new user, check if email matches ADMIN_EMAIL in env
           if (!dbUser) {
             const userId = crypto.randomUUID();
             console.log("Creating new user with ID:", userId);
-            
+
             // Check if this user's email matches the admin email in env
             const adminEmail = process.env.ADMIN_EMAIL;
             const isAdmin = adminEmail && user.email?.toLowerCase() === adminEmail.toLowerCase();
             const role = isAdmin ? 'admin' : 'applicant'; // New users start as applicants
             console.log(`Creating user with role: ${role} (Admin email match: ${isAdmin})`);
-            
+
             try {
               console.log(`Attempting to create user: ${JSON.stringify({
                 id: userId,
@@ -95,21 +95,21 @@ export const authConfig: NextAuthOptions = {
                 name: user.name!,
                 role: role,
               })}`);
-              
+
               dbUser = await createUser({
                 id: userId,
                 email: user.email!,
                 name: user.name!,
                 role: role,
               });
-              
+
               console.log(`User created successfully: ${JSON.stringify(dbUser)}`);
             } catch (createError) {
               console.error(`Error creating user: ${createError instanceof Error ? createError.message : String(createError)}`);
               throw createError; // Re-throw to be caught by outer catch
             }
           }
-          
+
           console.log("User found/created:", dbUser);
           return {
             ...token,
@@ -127,11 +127,11 @@ export const authConfig: NextAuthOptions = {
           };
         }
       }
-      
+
       // On subsequent calls, return the token
       return token;
     },
-    
+
     async session({ session, token }) {
       // Add user role and id to the session
       if (token && session.user) {
@@ -162,11 +162,12 @@ export function canAccessRole(userRole: UserRole, requiredRole: UserRole): boole
   const roleHierarchy: Record<UserRole, number> = {
     'admin': 4,
     'organizer': 3,
+    'mentor': 2.5,
     'volunteer': 2,
     'participant': 1,
     'applicant': 0, // Applicants have lowest access
   };
-  
+
   return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
 }
 

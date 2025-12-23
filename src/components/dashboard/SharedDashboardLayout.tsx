@@ -20,7 +20,7 @@ interface NavigationSection {
 interface SharedDashboardLayoutProps {
   children: React.ReactNode;
   title: string;
-  colorScheme: 'purple' | 'blue' | 'teal' | 'green' | 'amber';
+  colorScheme: 'purple' | 'blue' | 'teal' | 'green' | 'amber' | 'indigo' | 'rose';
   navigation: NavigationSection[];
   roleLabel: string;
   additionalLinks?: React.ReactNode;
@@ -61,6 +61,20 @@ const colorSchemes = {
     bgHover: 'hover:bg-amber-800',
     textLight: 'text-amber-300',
     border: 'border-amber-800',
+  },
+  indigo: {
+    bg: 'bg-indigo-900',
+    bgLight: 'bg-indigo-700',
+    bgHover: 'hover:bg-indigo-800',
+    textLight: 'text-indigo-300',
+    border: 'border-indigo-800',
+  },
+  rose: {
+    bg: 'bg-rose-900',
+    bgLight: 'bg-rose-700',
+    bgHover: 'hover:bg-rose-800',
+    textLight: 'text-rose-300',
+    border: 'border-rose-800',
   },
 };
 
@@ -120,8 +134,8 @@ export default function SharedDashboardLayout({
                     key={item.href}
                     href={item.href}
                     className={`block px-4 py-3 rounded-lg transition-colors text-sm font-medium ${isActive(item.href)
-                        ? `${colors.bgLight} text-white shadow-sm`
-                        : `${colors.bgHover} text-white/90 hover:text-white`
+                      ? `${colors.bgLight} text-white shadow-sm`
+                      : `${colors.bgHover} text-white/90 hover:text-white`
                       }`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
