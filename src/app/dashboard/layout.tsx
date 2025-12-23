@@ -24,7 +24,6 @@ const getRoleConfig = (role: UserRole) => {
             title: 'Administration',
             items: [
               { href: '/dashboard/users', label: 'User Management' },
-              { href: '/dashboard/analytics', label: 'Analytics' },
             ],
           },
         ],

@@ -25,17 +25,24 @@ export default function AdminViewAsPage() {
   }, [session]);
 
   if (!session?.user || session.user.role !== 'admin') {
-    return <div className="p-6">Unauthorized</div>;
+    return <div className="mx-6 py-6 text-slate-600">Unauthorized</div>;
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Admin: View As User</h1>
+    <div className="space-y-6">
+      <div className="mx-6 pt-6">
+        <h1 className="text-2xl font-semibold text-slate-900">View as User</h1>
+        <p className="text-slate-500 mt-1">Preview a participant's registration view</p>
+      </div>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Select user</label>
-        <select value={selectedUser ?? ''} onChange={e => setSelectedUser(e.target.value || null)} className="border rounded p-2">
-          <option value="">-- pick user --</option>
+      <div className="mx-6">
+        <label className="block text-sm font-medium text-slate-700 mb-2">Select user to preview</label>
+        <select
+          value={selectedUser ?? ''}
+          onChange={e => setSelectedUser(e.target.value || null)}
+          className="w-full border border-slate-200 rounded-lg p-2.5 text-slate-900 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+        >
+          <option value="">Choose a user...</option>
           {users.map(u => (
             <option key={u.id} value={u.id}>{u.name} — {u.email}</option>
           ))}
@@ -43,12 +50,14 @@ export default function AdminViewAsPage() {
       </div>
 
       {selectedUser ? (
-        <div>
-          <h2 className="text-lg font-semibold mb-3">Preview as selected user</h2>
+        <div className="mx-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Preview</h2>
           <UserRegistrationsSection viewAsUserId={selectedUser} />
         </div>
       ) : (
-        <div className="text-gray-600">Choose a user to preview their participant view.</div>
+        <div className="mx-6 bg-white border border-dashed border-slate-300 rounded-2xl p-6 text-center text-slate-500">
+          Select a user above to preview their participant dashboard.
+        </div>
       )}
     </div>
   );

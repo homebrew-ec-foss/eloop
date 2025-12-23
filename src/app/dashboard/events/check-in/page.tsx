@@ -45,15 +45,17 @@ export default function CheckInPage() {
   const [loadingCheckpoints, setLoadingCheckpoints] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<string>('');
   const [availableEvents, setAvailableEvents] = useState<Array<{
-    id: string, 
-    name: string, 
+    id: string,
+    name: string,
     checkpoints: string[],
     unlockedCheckpoints: string[]
   }>>([]);
   const [autoScanEnabled, setAutoScanEnabled] = useState(false);
   const [scannerKey, setScannerKey] = useState(0);
   const isOrganizer = session?.user?.role === 'organizer' || session?.user?.role === 'admin';
-  
+  const [lastCheckpointUpdate, setLastCheckpointUpdate] = useState<string>('');
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   // Audio refs for sound effects
   const successSoundRef = useRef<HTMLAudioElement | null>(null);
   const errorSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -77,15 +79,15 @@ export default function CheckInPage() {
       try {
         const response = await fetch('/api/events');
         if (!response.ok) throw new Error('Failed to fetch events');
-        
+
         const data = await response.json();
         const events = data.events || data;
-        
+
         if (events && events.length > 0) {
           // Store all events with their checkpoints and unlocked checkpoints
           const eventList = events.map((event: {
-            id: string, 
-            name: string, 
+            id: string,
+            name: string,
             checkpoints?: string[],
             unlockedCheckpoints?: string[]
           }) => ({
@@ -94,18 +96,18 @@ export default function CheckInPage() {
             checkpoints: event.checkpoints || ['Registration', 'Lunch', 'Dinner'],
             unlockedCheckpoints: event.unlockedCheckpoints || ['Registration']
           }));
-          
+
           setAvailableEvents(eventList);
-          
+
           // Auto-select first event
           setSelectedEvent(eventList[0].id);
-          
+
           // Volunteers: only show unlocked checkpoints
           // Organizers: show all checkpoints
-          const checkpointsToShow = isOrganizer 
-            ? eventList[0].checkpoints 
+          const checkpointsToShow = isOrganizer
+            ? eventList[0].checkpoints
             : eventList[0].unlockedCheckpoints;
-          
+
           setAvailableCheckpoints(checkpointsToShow);
           setSelectedCheckpoint(checkpointsToShow[0]);
         } else {
@@ -126,6 +128,56 @@ export default function CheckInPage() {
     fetchEvents();
   }, [isOrganizer]);
 
+  // Poll for checkpoint updates (for volunteers only)
+  useEffect(() => {
+    if (isOrganizer || !selectedEvent) return;
+
+    const pollCheckpoints = async () => {
+      try {
+        const response = await fetch(`/api/events/${selectedEvent}`);
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const event = data.event;
+
+        const currentCheckpoints = JSON.stringify(event.unlockedCheckpoints || []);
+
+        // If checkpoints changed, update UI and show notification
+        if (lastCheckpointUpdate && lastCheckpointUpdate !== currentCheckpoints) {
+          const updatedEvent = availableEvents.find(e => e.id === selectedEvent);
+          if (updatedEvent) {
+            updatedEvent.unlockedCheckpoints = event.unlockedCheckpoints || [];
+            setAvailableEvents([...availableEvents]);
+          }
+
+          setAvailableCheckpoints(event.unlockedCheckpoints || []);
+          if (event.unlockedCheckpoints && event.unlockedCheckpoints.length > 0) {
+            setSelectedCheckpoint(event.unlockedCheckpoints[0]);
+          }
+
+          // Visual feedback for checkpoint change
+          playSuccessSound();
+        }
+
+        setLastCheckpointUpdate(currentCheckpoints);
+      } catch (err) {
+        console.error('Error polling checkpoints:', err);
+      }
+    };
+
+    // Initial poll
+    pollCheckpoints();
+
+    // Poll every 3 seconds
+    pollingIntervalRef.current = setInterval(pollCheckpoints, 3000);
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [isOrganizer, selectedEvent, lastCheckpointUpdate, availableEvents]);
+
   // Update checkpoints when event selection changes
   const handleEventChange = (eventId: string) => {
     setSelectedEvent(eventId);
@@ -133,17 +185,19 @@ export default function CheckInPage() {
     if (event) {
       // Volunteers: only show unlocked checkpoints
       // Organizers: show all checkpoints
-      const checkpointsToShow = isOrganizer 
-        ? event.checkpoints 
+      const checkpointsToShow = isOrganizer
+        ? event.checkpoints
         : event.unlockedCheckpoints;
-      
+
       setAvailableCheckpoints(checkpointsToShow);
       setSelectedCheckpoint(checkpointsToShow[0]);
       // Reset scanner with new key when changing events (this will reset camera)
       setScannerKey(prev => prev + 1);
+      // Reset polling state for new event
+      setLastCheckpointUpdate('');
     }
   };
-  
+
   // Verify user has proper permissions (volunteers, organizers, admins only)
   useEffect(() => {
     if (session && session.user) {
@@ -183,37 +237,37 @@ export default function CheckInPage() {
 
   const handleScan = async (qrData: string) => {
     if (isProcessing) return;
-    
+
     try {
       setIsProcessing(true);
       setError(null);
       setScanResult(null);
       setIsScanning(false);
-      
+
       // Call the check-in API with checkpoint
       const response = await fetch('/api/events/check-in', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           qrToken: qrData,
-          checkpoint: selectedCheckpoint 
+          checkpoint: selectedCheckpoint
         }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         setError(data.error || 'Failed to process check-in');
         playErrorSound();
         return;
       }
-      
+
       // Show success
       setScanResult(data);
       playSuccessSound();
-      
+
       // Add to recent check-ins
       setRecentCheckIns(prev => [data, ...prev.slice(0, 4)]);
     } catch (err) {
@@ -238,7 +292,7 @@ export default function CheckInPage() {
       const timer = setTimeout(() => {
         resetScanner();
       }, 2000); // Wait 2 seconds after successful scan before restarting
-      
+
       return () => clearTimeout(timer);
     }
   }, [autoScanEnabled, scanResult, isScanning]);
@@ -248,236 +302,236 @@ export default function CheckInPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column: Scanner */}
-        <div>
-          <h1 className="text-2xl font-bold mb-4">Check-In Scanner</h1>
-          
-          <div className="mb-4">
-            <p className="text-gray-600 text-sm mb-3">
-              Scan participant QR codes to check them into the event.
-            </p>
-            
-            {/* Event Selector */}
-            {availableEvents.length > 1 && (
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  <Calendar className="inline w-4 h-4 mr-1" />
-                  Select Event
-                </label>
-                <select
-                  value={selectedEvent}
-                  onChange={(e) => handleEventChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-purple-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  {availableEvents.map(event => (
-                    <option key={event.id} value={event.id}>
-                      {event.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            
-            {/* Checkpoint Selector */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    <MapPin className="inline w-4 h-4 mr-1" />
-                    Select Checkpoint (Sequential Order)
-                  </label>
-                  {loadingCheckpoints ? (
-                    <div className="text-center py-4">
-                      <div className="animate-pulse text-gray-500">Loading checkpoints...</div>
-                    </div>
-                  ) : availableCheckpoints.length === 0 ? (
-                    <div className="text-center py-4 text-gray-500">
-                      <p>No checkpoints available</p>
-                      <p className="text-xs mt-1">Create an event with checkpoints first</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex gap-2 flex-wrap">
-                        {availableCheckpoints.map((checkpoint, index) => (
-                          <button
-                            key={checkpoint}
-                            onClick={() => setSelectedCheckpoint(checkpoint)}
-                            className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                              selectedCheckpoint === checkpoint
-                                ? 'bg-blue-600 text-white shadow-md'
-                                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-                            }`}
-                          >
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                              selectedCheckpoint === checkpoint
-                                ? 'bg-blue-800 text-white'
-                                : 'bg-gray-200 text-gray-700'
-                            }`}>
-                              {index + 1}
-                            </span>
-                            {checkpoint}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-600 mt-3">
-                        Currently checking into: <strong>{selectedCheckpoint}</strong>
-                      </p>
-                      <p className="text-xs text-amber-600 mt-1">
-                        ⚠️ Participants must complete checkpoints in order
-                      </p>
-                    </>
-                  )}
-                </div>
-            
-            {/* Auto-Scan Toggle */}
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <label className="flex items-center cursor-pointer">
-                <div className="relative">
-                  <input
-                    type="checkbox"
-                    checked={autoScanEnabled}
-                    onChange={(e) => setAutoScanEnabled(e.target.checked)}
-                    className="sr-only"
-                  />
-                  <div className={`block w-14 h-8 rounded-full transition ${
-                    autoScanEnabled ? 'bg-green-600' : 'bg-gray-400'
-                  }`}></div>
-                  <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition ${
-                    autoScanEnabled ? 'transform translate-x-6' : ''
-                  }`}></div>
-                </div>
-                <div className="ml-3 flex-1">
-                  <span className="text-sm font-semibold text-gray-700">Auto-Scan Next</span>
-                  <p className="text-xs text-gray-600">Automatically scan next participant after 2 seconds</p>
-                </div>
-              </label>
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow-md relative">
-            {/* Scanner - always mounted to preserve camera selection */}
-            <div className={isScanning ? '' : 'hidden'}>
-              <GenericQRScanner
-                key={scannerKey}
-                onScan={handleScan}
-                scannerTitle="Check-In Scanner"
-                scannerDescription="Scan participant QR code"
-                isActive={isScanning}
-              />
-            </div>
-            
-            {/* Results overlay - shown on top of scanner */}
-            {!isScanning && (
-              <div className="py-2">
-                {isProcessing ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                    <p className="text-gray-600">Processing check-in...</p>
-                  </div>
-                ) : error ? (
-                  <div className="text-center py-4">
-                    <div className="bg-red-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                      <X className="text-red-500 w-8 h-8" />
-                    </div>
-                    <h2 className="text-xl font-semibold mb-2 text-red-600">Check-In Failed</h2>
-                    <p className="text-red-600 mb-6">{error}</p>
-                  <button
-                    onClick={resetScanner}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 inline-flex items-center"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" /> Scan Again
-                  </button>
-                </div>
-              ) : scanResult?.success ? (
-                <div className="text-center py-4">
-                  <div className="bg-green-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                    <Check className="text-green-500 w-8 h-8" />
-                  </div>
-                  <h2 className="text-xl font-semibold mb-2 text-green-600">✓ Check-In Successful</h2>
-                  
-                  {scanResult.user && (
-                    <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center justify-center mb-2">
-                        <User className="w-5 h-5 mr-2 text-gray-600" />
-                        <p className="font-semibold text-lg">{scanResult.user.name}</p>
-                      </div>
-                      <p className="text-sm text-gray-600">{scanResult.user.email}</p>
-                    </div>
-                  )}
-                  
-                  <button
-                    onClick={resetScanner}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 inline-flex items-center"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" /> Scan Next
-                  </button>
-                </div>
-              ) : null}
-            </div>
-            )}
-          </div>
-        </div>
+    <div className="mx-6 py-6 max-w-7xl">
+      <div className="mb-6">
+        <h1 className="text-3xl font-semibold text-slate-900">Check-In Scanner</h1>
+        <p className="text-slate-500 mt-1">Scan participant QR codes to check them into the event</p>
+      </div>
 
-        {/* Right Column: Recent Check-ins & History */}
-        <div>
-          <h2 className="text-xl font-bold mb-4">Recent Check-Ins</h2>
-          
-          {recentCheckIns.length === 0 ? (
-            <div className="bg-white p-6 rounded-lg shadow-md text-center text-gray-500">
-              <p>No recent check-ins</p>
-                <p className="text-sm mt-2">Scanned participants will appear here</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Controls */}
+        <div className="space-y-5">
+          {/* Event Selector */}
+          {availableEvents.length > 1 && (
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+              <label className="block text-sm font-medium text-slate-700 mb-3">
+                <Calendar className="inline w-4 h-4 mr-1.5 text-indigo-600" />
+                Event
+              </label>
+              <select
+                value={selectedEvent}
+                onChange={(e) => handleEventChange(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              >
+                {availableEvents.map(event => (
+                  <option key={event.id} value={event.id}>
+                    {event.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Checkpoint Selector */}
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+            <label className="block text-sm font-medium text-slate-700 mb-3">
+              <MapPin className="inline w-4 h-4 mr-1.5 text-indigo-600" />
+              Active Checkpoint
+            </label>
+            {loadingCheckpoints ? (
+              <div className="text-center py-8">
+                <div className="animate-pulse text-slate-400">Loading...</div>
+              </div>
+            ) : availableCheckpoints.length === 0 ? (
+              <div className="text-center py-6 px-4 bg-slate-50 rounded-xl">
+                <p className="text-slate-600 text-sm">No checkpoints available</p>
+                <p className="text-xs text-slate-400 mt-1">Waiting for organizer to unlock checkpoints</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {recentCheckIns.map((checkIn, index) => (
-                  <div key={index} className="bg-white p-4 rounded-lg shadow-md border-l-4 border-green-500">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center mb-2">
-                          <User className="w-4 h-4 mr-2 text-gray-600" />
-                          <h3 className="font-semibold">{checkIn.user?.name}</h3>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2">{checkIn.user?.email}</p>
-                        
-                        {checkIn.registration?.eventName && (
-                          <div className="flex items-center text-sm text-gray-500 mb-2">
-                            <Calendar className="w-4 h-4 mr-1" />
-                            <span>{checkIn.registration.eventName}</span>
-                          </div>
-                        )}
-                        
-                        {/* Checkpoint History */}
-                        {checkIn.registration?.checkpointCheckIns && checkIn.registration.checkpointCheckIns.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-gray-200">
-                            <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center">
-                              <MapPin className="w-3 h-3 mr-1" />
-                              Checkpoint History:
-                            </p>
-                            <div className="space-y-1">
-                              {checkIn.registration.checkpointCheckIns.map((cp, cpIndex) => (
-                                <div key={cpIndex} className="text-xs text-gray-600 flex items-center justify-between bg-gray-50 p-2 rounded">
-                                  <span className="font-medium">{cp.checkpoint}</span>
-                                  <span className="text-gray-500">
-                                    {new Date(cp.checkedInAt).toLocaleTimeString()}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="ml-4">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          ✓ Checked In
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                {availableCheckpoints.map((checkpoint, index) => (
+                  <button
+                    key={checkpoint}
+                    onClick={() => setSelectedCheckpoint(checkpoint)}
+                    className={`w-full px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${selectedCheckpoint === checkpoint
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+                      }`}
+                  >
+                    <span className={`flex items-center justify-center w-7 h-7 rounded-lg text-sm font-semibold ${selectedCheckpoint === checkpoint
+                        ? 'bg-indigo-700 text-white'
+                        : 'bg-slate-200 text-slate-700'
+                      }`}>
+                      {index + 1}
+                    </span>
+                    <span className="flex-1 text-left">{checkpoint}</span>
+                    {selectedCheckpoint === checkpoint && (
+                      <Check className="w-5 h-5" />
+                    )}
+                  </button>
                 ))}
               </div>
             )}
           </div>
+
+          {/* Auto-Scan Toggle */}
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+            <label className="flex items-start cursor-pointer">
+              <div className="relative mt-0.5">
+                <input
+                  type="checkbox"
+                  checked={autoScanEnabled}
+                  onChange={(e) => setAutoScanEnabled(e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`block w-11 h-6 rounded-full transition ${autoScanEnabled ? 'bg-emerald-600' : 'bg-slate-300'
+                  }`}></div>
+                <div className={`absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition-transform ${autoScanEnabled ? 'transform translate-x-5' : ''
+                  }`}></div>
+              </div>
+              <div className="ml-3 flex-1">
+                <span className="text-sm font-medium text-slate-900">Auto-Scan Mode</span>
+                <p className="text-xs text-slate-500 mt-0.5">Automatically scan next participant after 2 seconds</p>
+              </div>
+            </label>
+          </div>
+
+          {/* Info Badge */}
+          {selectedCheckpoint && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl shadow-sm p-4">
+              <p className="text-xs text-amber-700 flex items-start gap-2">
+                <span className="text-base">⚠️</span>
+                <span className="flex-1">Participants must complete checkpoints in sequential order</span>
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Center Column: Scanner */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 relative">
+          {/* Scanner - always mounted to preserve camera selection */}
+          <div className={isScanning ? '' : 'hidden'}>
+            <GenericQRScanner
+              key={scannerKey}
+              onScan={handleScan}
+              scannerTitle="Check-In Scanner"
+              scannerDescription="Position QR code within frame"
+              isActive={isScanning}
+            />
+          </div>
+
+          {/* Results overlay - shown on top of scanner */}
+          {!isScanning && (
+            <div className="py-2">
+              {isProcessing ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-slate-600 font-medium">Processing...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8">
+                  <div className="bg-rose-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <X className="text-rose-600 w-8 h-8" />
+                  </div>
+                  <h2 className="text-xl font-semibold mb-2 text-slate-900">Check-In Failed</h2>
+                  <p className="text-rose-600 mb-6 text-sm">{error}</p>
+                  <button
+                    onClick={resetScanner}
+                    className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 inline-flex items-center gap-2 font-medium transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" /> Scan Again
+                  </button>
+                </div>
+              ) : scanResult?.success ? (
+                <div className="text-center py-8">
+                  <div className="bg-emerald-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <Check className="text-emerald-600 w-8 h-8" />
+                  </div>
+                  <h2 className="text-xl font-semibold mb-4 text-emerald-600">Check-In Successful</h2>
+
+                  {scanResult.user && (
+                    <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="flex items-center justify-center mb-2">
+                        <User className="w-5 h-5 mr-2 text-slate-600" />
+                        <p className="font-semibold text-lg text-slate-900">{scanResult.user.name}</p>
+                      </div>
+                      <p className="text-sm text-slate-500">{scanResult.user.email}</p>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={resetScanner}
+                    className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 inline-flex items-center gap-2 font-medium transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" /> Scan Next
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Recent Check-ins */}
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Recent Check-Ins</h2>
+
+          {recentCheckIns.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8 text-center">
+              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <User className="w-6 h-6 text-slate-400" />
+              </div>
+              <p className="text-slate-600 text-sm">No recent check-ins</p>
+              <p className="text-xs text-slate-400 mt-1">Scanned participants will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentCheckIns.map((checkIn, index) => (
+                <div key={index} className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 border-l-4 border-l-emerald-500">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <User className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                        <h3 className="font-semibold text-slate-900 truncate">{checkIn.user?.name}</h3>
+                      </div>
+                      <p className="text-sm text-slate-500 truncate mb-2">{checkIn.user?.email}</p>
+
+                      {checkIn.registration?.eventName && (
+                        <div className="flex items-center text-xs text-slate-500 mb-2">
+                          <Calendar className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                          <span className="truncate">{checkIn.registration.eventName}</span>
+                        </div>
+                      )}
+
+                      {/* Checkpoint History */}
+                      {checkIn.registration?.checkpointCheckIns && checkIn.registration.checkpointCheckIns.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-200">
+                          <p className="text-xs font-medium text-slate-700 mb-2 flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            Checkpoints:
+                          </p>
+                          <div className="space-y-1.5">
+                            {checkIn.registration.checkpointCheckIns.map((cp, cpIndex) => (
+                              <div key={cpIndex} className="text-xs flex items-center justify-between bg-slate-50 px-2.5 py-1.5 rounded-lg">
+                                <span className="font-medium text-slate-700">{cp.checkpoint}</span>
+                                <span className="text-slate-500">
+                                  {new Date(cp.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 ml-3 flex-shrink-0">
+                      ✓ Done
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -25,11 +25,11 @@ export default function VolunteersManagePage() {
     const fetchUsers = async () => {
       try {
         const response = await fetch('/api/organizer/users');
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch users');
         }
-        
+
         const data = await response.json();
         setUsers(data.users);
       } catch (err) {
@@ -50,7 +50,7 @@ export default function VolunteersManagePage() {
       setIsLoading(true);
       setError(null);
       setSuccessMessage(null);
-      
+
       const response = await fetch('/api/volunteer/create', {
         method: 'POST',
         headers: {
@@ -58,21 +58,21 @@ export default function VolunteersManagePage() {
         },
         body: JSON.stringify({ userId }),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to promote user to volunteer');
       }
-      
+
       const { user: updatedUser } = await response.json();
-      
+
       // Update users array
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
+      setUsers(prevUsers =>
+        prevUsers.map(user =>
           user.id === updatedUser.id ? updatedUser : user
         )
       );
-      
+
       setSuccessMessage(`User ${updatedUser.name} promoted to volunteer`);
     } catch (err) {
       setError('Error promoting user: ' + (err instanceof Error ? err.message : String(err)));
@@ -81,94 +81,127 @@ export default function VolunteersManagePage() {
     }
   };
 
-  // Get role badge color
+  // Get role badge colors
   const getRoleBadgeColor = (role: UserRole) => {
     switch (role) {
-      case 'admin': return 'bg-red-500';
-      case 'organizer': return 'bg-blue-500';
-      case 'volunteer': return 'bg-green-500';
-      case 'participant': return 'bg-teal-500';
-      case 'applicant': return 'bg-amber-500';
-      default: return 'bg-gray-500';
+      case 'admin': return 'bg-rose-100 text-rose-700';
+      case 'organizer': return 'bg-indigo-100 text-indigo-700';
+      case 'volunteer': return 'bg-emerald-100 text-emerald-700';
+      case 'participant': return 'bg-teal-100 text-teal-700';
+      case 'applicant': return 'bg-amber-100 text-amber-700';
+      default: return 'bg-slate-100 text-slate-700';
     }
   };
 
   // Filter users who are applicants, participants, or volunteers
-  const filteredUsers = users.filter(user => 
+  const filteredUsers = users.filter(user =>
     user.role === 'applicant' ||
-    user.role === 'participant' || 
-    (user.role === 'volunteer' && 
-     (user.organizerId === session?.user?.id || session?.user?.role === 'admin'))
+    user.role === 'participant' ||
+    (user.role === 'volunteer' &&
+      (user.organizerId === session?.user?.id || session?.user?.role === 'admin'))
   );
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">User & Volunteer Management</h1>
-      
-      <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mb-6">
-        <p className="text-blue-800 text-sm">
-          <strong>Promote users to volunteers:</strong> Select applicants or participants below and promote them to volunteer status. 
-          Volunteers can help with event check-ins and other tasks.
+    <div className="space-y-6">
+      <div className="mx-6 pt-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">User & Volunteer Management</h1>
+          <p className="text-slate-500 mt-1">Manage participants and promote volunteers</p>
+        </div>
+      </div>
+
+      <div className="mx-6 bg-indigo-50 border border-indigo-200 rounded-2xl p-5">
+        <p className="text-indigo-900 text-sm">
+          <strong>Promote to Volunteer:</strong> Select applicants or participants to promote them to volunteer status. Volunteers assist with event check-ins and tasks.
         </p>
       </div>
-      
+
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+        <div className="mx-6 bg-rose-50 border border-rose-200 text-rose-700 px-5 py-4 rounded-xl">
+          <p className="font-medium">{error}</p>
         </div>
       )}
-      
+
       {successMessage && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-          {successMessage}
+        <div className="mx-6 bg-emerald-50 border border-emerald-200 text-emerald-700 px-5 py-4 rounded-xl">
+          <p className="font-medium">{successMessage}</p>
         </div>
       )}
-      
-      {isLoading && <div className="text-gray-500">Loading users...</div>}
-      
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white rounded-lg shadow">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-500 uppercase">Email</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-500 uppercase">Role</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
+
+      {isLoading ? (
+        <div className="mx-6 text-slate-500">Loading users...</div>
+      ) : filteredUsers.length === 0 ? (
+        <div className="mx-6 bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
+          <p className="text-slate-500">No applicants, participants, or volunteers found.</p>
+        </div>
+      ) : (
+        <div className="mx-6 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs uppercase tracking-wide font-medium text-slate-500">Name</th>
+                  <th className="px-6 py-3 text-left text-xs uppercase tracking-wide font-medium text-slate-500">Email</th>
+                  <th className="px-6 py-3 text-left text-xs uppercase tracking-wide font-medium text-slate-500">Role</th>
+                  <th className="px-6 py-3 text-left text-xs uppercase tracking-wide font-medium text-slate-500">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {filteredUsers.map(user => (
+                  <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-slate-900">{user.name}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{user.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      {(user.role === 'applicant' || user.role === 'participant') && (
+                        <button
+                          onClick={() => promoteToVolunteer(user.id)}
+                          className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-xs transition-colors disabled:opacity-50"
+                          disabled={isLoading}
+                        >
+                          Promote
+                        </button>
+                      )}
+                      {user.role === 'volunteer' && (
+                        <span className="text-xs text-slate-500 font-medium">Volunteer</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3 p-4">
             {filteredUsers.map(user => (
-              <tr key={user.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full text-white ${getRoleBadgeColor(user.role)}`}>
+              <div key={user.id} className="border border-slate-200 rounded-xl p-4 space-y-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-semibold text-slate-900">{user.name}</h3>
+                    <p className="text-sm text-slate-600">{user.email}</p>
+                  </div>
+                  <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
                     {user.role}
                   </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  {(user.role === 'applicant' || user.role === 'participant') && (
-                    <button 
-                      onClick={() => promoteToVolunteer(user.id)}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
-                      disabled={isLoading}
-                    >
-                      Promote to Volunteer
-                    </button>
-                  )}
-                  {user.role === 'volunteer' && (
-                    <span className="text-gray-500">Already a volunteer</span>
-                  )}
-                </td>
-              </tr>
+                </div>
+                {(user.role === 'applicant' || user.role === 'participant') && (
+                  <button
+                    onClick={() => promoteToVolunteer(user.id)}
+                    className="w-full px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors disabled:opacity-50"
+                    disabled={isLoading}
+                  >
+                    Promote to Volunteer
+                  </button>
+                )}
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
-      
-      {filteredUsers.length === 0 && !isLoading && (
-        <div className="text-center py-10">
-          <p className="text-gray-500">No applicants, participants, or volunteers found.</p>
+          </div>
         </div>
       )}
     </div>

@@ -34,7 +34,7 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    if ((path.startsWith('/dashboard/users') || path.startsWith('/dashboard/analytics')) && userRole !== 'admin') {
+    if (path.startsWith('/dashboard/users') && userRole !== 'admin') {
       url.pathname = '/dashboard';
       return NextResponse.redirect(url);
     }

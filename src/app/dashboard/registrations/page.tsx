@@ -25,7 +25,7 @@ export default function RegistrationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
-  
+
   // Check if user is participant (only participants should see QR codes)
   const isParticipant = session?.user?.role === 'participant';
 
@@ -33,11 +33,11 @@ export default function RegistrationsPage() {
     const fetchRegistrations = async () => {
       try {
         const response = await fetch('/api/events/registrations');
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch registrations');
         }
-        
+
         const data = await response.json();
         setRegistrations(data.registrations);
       } catch (err) {
@@ -52,14 +52,14 @@ export default function RegistrationsPage() {
       fetchRegistrations();
     }
   }, [session]);
-  
+
   // Just use the global refresh mechanism managed by the hook
 
   if (!session?.user) {
     return (
-      <div className="p-6">
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded">
-          <p>You need to be signed in to view your registrations.</p>
+      <div className="mx-6 py-6">
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 px-5 py-4 rounded-xl">
+          <p>Sign in to view your registrations.</p>
         </div>
       </div>
     );
@@ -67,17 +67,17 @@ export default function RegistrationsPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">
+      <div className="mx-6 py-6">
+        <h1 className="text-2xl font-semibold text-slate-900 mb-6">
           {isParticipant ? 'Your Registrations' : 'All Registrations'}
         </h1>
         <div className="animate-pulse space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white p-6 rounded-lg shadow-md">
-              <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+            <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div className="h-6 bg-slate-200 rounded w-1/3 mb-4"></div>
+              <div className="h-4 bg-slate-200 rounded w-1/4 mb-2"></div>
+              <div className="h-4 bg-slate-200 rounded w-full mb-2"></div>
+              <div className="h-4 bg-slate-200 rounded w-2/3"></div>
             </div>
           ))}
         </div>
@@ -87,11 +87,11 @@ export default function RegistrationsPage() {
 
   if (error) {
     return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">
+      <div className="mx-6 py-6">
+        <h1 className="text-2xl font-semibold text-slate-900 mb-6">
           {isParticipant ? 'Your Registrations' : 'All Registrations'}
         </h1>
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 px-5 py-4 rounded-xl">
           <p>{error}</p>
         </div>
       </div>
@@ -103,56 +103,63 @@ export default function RegistrationsPage() {
     // Only show QR code if registration is approved or checked-in
     if (selectedRegistration.status !== 'approved' && selectedRegistration.status !== 'checked-in') {
       return (
-        <div className="p-6">
-          <button 
-            onClick={() => setSelectedRegistration(null)} 
-            className="text-blue-600 hover:text-blue-800 mb-6 flex items-center"
+        <div className="mx-6 py-6">
+          <button
+            onClick={() => setSelectedRegistration(null)}
+            className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium mb-6"
           >
-            ← Back to all registrations
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Registrations
           </button>
-          
-          <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded">
+
+          <div className="bg-amber-50 border border-amber-200 text-amber-700 px-5 py-4 rounded-xl space-y-1">
             <p className="font-medium">Registration Pending Approval</p>
-            <p className="text-sm mt-1">Your registration is awaiting approval from the event organizer. You'll be able to access your QR code once approved.</p>
+            <p className="text-sm">Your registration is awaiting approval from the event organizer. You'll access your QR code once approved.</p>
           </div>
         </div>
       );
     }
-    
+
     return (
-      <div className="p-6">
-        <button 
-          onClick={() => setSelectedRegistration(null)} 
-          className="text-blue-600 hover:text-blue-800 mb-6 flex items-center"
+      <div className="mx-6 py-6">
+        <button
+          onClick={() => setSelectedRegistration(null)}
+          className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium mb-6"
         >
-          ← Back to all registrations
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Registrations
         </button>
-        
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold mb-4">{selectedRegistration.eventName}</h2>
-          <p className="text-gray-600 mb-6">
-            {new Date(selectedRegistration.eventDate).toLocaleDateString()} at{' '}
-            {new Date(selectedRegistration.eventDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </p>
-          
-          <div className="flex justify-center mb-6">
-            <GenericQRDisplay 
+
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-6">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900">{selectedRegistration.eventName}</h2>
+            <p className="text-slate-600 mt-2">
+              {new Date(selectedRegistration.eventDate).toLocaleDateString()} at{' '}
+              {new Date(selectedRegistration.eventDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
+
+          <div className="flex justify-center">
+            <GenericQRDisplay
               qrData={selectedRegistration.qrCode}
               title="Your Check-in QR Code"
-              description="Present this to the event staff when you arrive"
+              description="Show this to event staff upon arrival"
             />
           </div>
-          
-          <div className="border-t pt-4">
-            <h3 className="font-medium mb-2">Registration Status</h3>
-            <div className="flex items-center">
-              <span className={`inline-block w-3 h-3 rounded-full mr-2 ${
-                selectedRegistration.status === 'checked-in' ? 'bg-green-500' : 'bg-blue-500'
-              }`}></span>
-              <span>
-                {selectedRegistration.status === 'checked-in' 
-                  ? `Checked in on ${new Date(selectedRegistration.checkedInAt || '').toLocaleDateString()}` 
-                  : 'Approved - Ready to check in'}
+
+          <div className="border-t border-slate-200 pt-4">
+            <h3 className="font-medium text-slate-900 mb-3">Status</h3>
+            <div className="flex items-center gap-2">
+              <span className={`inline-block w-2.5 h-2.5 rounded-full ${selectedRegistration.status === 'checked-in' ? 'bg-emerald-500' : 'bg-indigo-500'
+                }`}></span>
+              <span className="text-slate-700">
+                {selectedRegistration.status === 'checked-in'
+                  ? `Checked in ${new Date(selectedRegistration.checkedInAt || '').toLocaleDateString()}`
+                  : '✓ Approved - Ready to check in'}
               </span>
             </div>
           </div>
@@ -162,74 +169,74 @@ export default function RegistrationsPage() {
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">
-        {isParticipant ? 'Your Registrations' : 'All Registrations'}
-      </h1>
-      
+    <div className="space-y-6">
+      <div className="mx-6 pt-6">
+        <h1 className="text-2xl font-semibold text-slate-900">
+          {isParticipant ? 'Your Registrations' : 'All Registrations'}
+        </h1>
+        <p className="text-slate-500 mt-1">Track your event registrations and check-in status</p>
+      </div>
+
       {registrations.length === 0 ? (
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <p className="text-gray-500">
-            {isParticipant 
+        <div className="mx-6 bg-white border border-slate-200 rounded-2xl shadow-sm p-8 text-center">
+          <p className="text-slate-600">
+            {isParticipant
               ? "You haven't registered for any events yet."
               : "No registrations found."}
           </p>
           {isParticipant && (
-            <Link href="/dashboard" className="text-blue-600 hover:text-blue-800 mt-4 inline-block">
+            <Link href="/dashboard/events" className="text-indigo-600 hover:text-indigo-700 font-medium mt-4 inline-block">
               Browse upcoming events
             </Link>
           )}
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="mx-6 space-y-4">
           {registrations.map((registration) => (
-            <div key={registration.id} className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h2 className="font-bold text-xl mb-2">{registration.eventName}</h2>
-                  <p className="text-gray-600 mb-2">
-                    {new Date(registration.eventDate).toLocaleDateString()} at{' '}
-                    {new Date(registration.eventDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            <div key={registration.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 space-y-4">
+              <div>
+                <h2 className="font-semibold text-lg text-slate-900">{registration.eventName}</h2>
+                <p className="text-slate-600 text-sm mt-1">
+                  {new Date(registration.eventDate).toLocaleDateString()} at{' '}
+                  {new Date(registration.eventDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+                {/* Show user info for organizers/admins */}
+                {!isParticipant && registration.userName && (
+                  <p className="text-sm text-slate-700 mt-2">
+                    <span className="font-medium">Participant:</span> {registration.userName} ({registration.userEmail})
                   </p>
-                  {/* Show user info for organizers/admins */}
-                  {!isParticipant && registration.userName && (
-                    <p className="text-sm text-gray-700">
-                      <span className="font-medium">Participant:</span> {registration.userName} ({registration.userEmail})
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
-              
-              <div className="flex items-center mb-4">
-                <span className={`inline-block w-3 h-3 rounded-full mr-2 ${
-                  registration.status === 'checked-in' ? 'bg-green-500' : 
-                  registration.status === 'approved' ? 'bg-blue-500' :
-                  registration.status === 'rejected' ? 'bg-red-500' : 'bg-yellow-500'
-                }`}></span>
-                <span className="text-sm text-gray-600">
-                  {registration.status === 'checked-in' 
-                    ? `Checked in on ${new Date(registration.checkedInAt || '').toLocaleDateString()}` 
+
+              <div className="flex items-center gap-2 py-2 border-t border-slate-200">
+                <span className={`inline-block w-2 h-2 rounded-full ${registration.status === 'checked-in' ? 'bg-emerald-500' :
+                    registration.status === 'approved' ? 'bg-indigo-500' :
+                      registration.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'
+                  }`}></span>
+                <span className="text-sm font-medium text-slate-700">
+                  {registration.status === 'checked-in'
+                    ? `✓ Checked in ${new Date(registration.checkedInAt || '').toLocaleDateString()}`
                     : registration.status === 'approved'
-                    ? 'Approved - Ready to check in'
-                    : registration.status === 'rejected'
-                    ? 'Registration rejected'
-                    : 'Pending approval'}
+                      ? '✓ Approved'
+                      : registration.status === 'rejected'
+                        ? '✗ Rejected'
+                        : '⏳ Pending'}
                 </span>
               </div>
-              
-              <div className="flex space-x-3">
+
+              <div className="flex gap-3">
                 {/* Only participants with approved or checked-in status can see their QR codes */}
                 {isParticipant && (registration.status === 'approved' || registration.status === 'checked-in') && (
                   <button
                     onClick={() => setSelectedRegistration(registration)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors"
                   >
                     Show QR Code
                   </button>
                 )}
                 <Link
                   href={`/dashboard/events/${registration.eventId}`}
-                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded"
+                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium text-sm transition-colors"
                 >
                   Event Details
                 </Link>

@@ -97,15 +97,6 @@ export interface QRData {
   [key: string]: unknown; // To make it compatible with JWTPayload
 }
 
-// Analytics structure
-export interface EventAnalytics {
-  eventId: string;
-  registrationCount: number;
-  checkinCount: number;
-  checkinRate: number;
-  fieldResponses: Record<string, unknown>; // Aggregated responses for analytics
-}
-
 // Scan log types
 export type ScanStatus = 'success' | 'error' | 'invalid_qr' | 'not_found' | 'wrong_checkpoint' | 'already_checked_in' | 'not_approved';
 

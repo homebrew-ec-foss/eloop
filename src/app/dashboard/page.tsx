@@ -22,6 +22,36 @@ export default function UnifiedDashboard() {
   const [registeredEventName, setRegisteredEventName] = useState<string>('');
   const [hasRegistration, setHasRegistration] = useState(false);
 
+  const StatCard = ({
+    label,
+    value,
+    href,
+    helper,
+    accent = 'text-indigo-600',
+  }: {
+    label: string;
+    value: string | number;
+    href?: string;
+    helper?: string;
+    accent?: string;
+  }) => {
+    const content = (
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition">
+        <p className="text-sm text-slate-500">{label}</p>
+        <p className={`text-3xl font-semibold mt-1 ${accent}`}>{value}</p>
+        {helper && <p className="text-xs text-slate-500 mt-2">{helper}</p>}
+      </div>
+    );
+    if (href) {
+      return (
+        <Link href={href} className="block">
+          {content}
+        </Link>
+      );
+    }
+    return content;
+  };
+
   // Approval message template controlled via env (client-accessible via NEXT_PUBLIC_*)
   const approvalTemplate =
     process.env.NEXT_PUBLIC_APPROVAL_MESSAGE ||
@@ -54,7 +84,7 @@ export default function UnifiedDashboard() {
         }
       }
     };
-    
+
     if (session?.user) {
       checkRegistration();
     }
@@ -64,11 +94,11 @@ export default function UnifiedDashboard() {
   useEffect(() => {
     const registration = searchParams.get('registration');
     const eventName = searchParams.get('event');
-    
+
     if (registration === 'success' && eventName) {
       setShowSuccessMessage(true);
       setRegisteredEventName(decodeURIComponent(eventName));
-      
+
       // Clear the query params after a short delay
       setTimeout(() => {
         const url = new URL(window.location.href);
@@ -87,7 +117,7 @@ export default function UnifiedDashboard() {
 
     if (status === 'authenticated') {
       fetchStats();
-      
+
       // Fetch latest event for applicants
       if (session?.user?.role === 'applicant') {
         fetchLatestEvent();
@@ -101,16 +131,16 @@ export default function UnifiedDashboard() {
       if (!res.ok) throw new Error('Failed to fetch stats');
       const data = await res.json();
       setStats(data);
-      
+
       // Check if the user's role in the database differs from their session role
       // This happens when an applicant is approved to participant
       if (data.role && session?.user?.role && data.role !== session.user.role) {
         console.log(`Role mismatch detected: session=${session.user.role}, database=${data.role}`);
         console.log('Logging out to refresh session with new role...');
-        
+
         // Sign out and redirect to sign in
-        await signOut({ 
-          callbackUrl: '/auth/signin?message=Your role has been updated. Please sign in again.' 
+        await signOut({
+          callbackUrl: '/auth/signin?message=Your role has been updated. Please sign in again.'
         });
       }
     } catch (error) {
@@ -126,14 +156,14 @@ export default function UnifiedDashboard() {
       if (!res.ok) return;
       const data = await res.json();
       const allEvents = data.events || [];
-      
+
       // Sort by date, get the latest
       const sortedEvents = [...allEvents].sort((a: any, b: any) => {
         const dateA = new Date(a.date);
         const dateB = new Date(b.date);
         return dateB.getTime() - dateA.getTime();
       });
-      
+
       if (sortedEvents.length > 0) {
         setLatestEvent(sortedEvents[0]);
       }
@@ -193,30 +223,21 @@ export default function UnifiedDashboard() {
 
   const role = session?.user?.role || 'applicant';
 
-    // Applicant Dashboard - Can browse and register for events
+  // Applicant Dashboard - Can browse and register for events
   if (role === 'applicant') {
     return (
-      <div className="space-y-4 md:space-y-6">
-        {/* Registration Success Message */}
+      <div className="space-y-6 md:space-y-8">
         {showSuccessMessage && registeredEventName && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 md:p-6">
-            <div className="flex items-start">
-              <svg className="h-6 w-6 text-green-600 mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+          <div className="bg-white border border-green-200 rounded-2xl p-4 md:p-5 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-xl bg-green-100 text-green-700 flex items-center justify-center text-xl">✓</div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-green-900 mb-1">Registration Successful! 🎉</h3>
-                <p className="text-green-800 mb-2">
-                  You have successfully registered for <strong>{registeredEventName}</strong>
-                </p>
-                <p className="text-green-700 text-sm" dangerouslySetInnerHTML={{ __html: approvalMessageHtml }} />
-                <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-3 mt-3">
-                  <p className="text-amber-800 text-sm mb-1">If approved you&apos;ll be a participant and can check in at the event.</p>
-                  <p className="text-amber-800 text-sm font-semibold">Refresh to see changes.</p>
-                </div>
+                <h3 className="text-lg font-semibold text-green-900">Registration successful</h3>
+                <p className="text-slate-700 mt-1">You registered for <strong>{registeredEventName}</strong>.</p>
+                <p className="text-sm text-slate-600 mt-2" dangerouslySetInnerHTML={{ __html: approvalMessageHtml }} />
                 <button
                   onClick={() => setShowSuccessMessage(false)}
-                  className="mt-3 text-sm text-green-700 hover:text-green-900 underline"
+                  className="mt-3 text-sm font-medium text-green-700 hover:text-green-900"
                 >
                   Dismiss
                 </button>
@@ -225,57 +246,52 @@ export default function UnifiedDashboard() {
           </div>
         )}
 
-        <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4 md:p-6">
-          <div className="flex items-center mb-3">
-            <div className="bg-amber-100 rounded-full p-2 mr-3">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+        <div className="bg-white rounded-2xl border border-amber-200 p-5 shadow-sm">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-amber-700">Applicant</p>
+              <h2 className="text-2xl font-semibold text-amber-900">Welcome</h2>
+              <p className="text-slate-700 mt-1">Browse events and register. You&apos;ll get a QR after approval.</p>
             </div>
-            <h2 className="text-xl md:text-2xl font-bold text-amber-900">Welcome!</h2>
+            <p className="text-sm text-slate-600 md:max-w-sm" dangerouslySetInnerHTML={{ __html: approvalMessageHtml }} />
           </div>
-          <p className="text-amber-800 mb-2">
-            Browse and register for events. If approved you&apos;ll be a participant and can check in at the event.
-          </p>
-          <p className="text-amber-700 text-sm mt-2" dangerouslySetInnerHTML={{ __html: approvalMessageHtml }} />
         </div>
 
-        {/* Show latest event only if user hasn't registered yet */}
-        {!hasRegistration && latestEvent ? (
-          <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">Latest Event</h3>
-            <div className="border rounded-lg p-4">
-              <h4 className="text-xl font-bold mb-2">{latestEvent.name}</h4>
-              <p className="text-gray-600 mb-3">
-                {new Date(latestEvent.date).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </p>
-              <p className="text-gray-700 mb-3 line-clamp-2">{latestEvent.description}</p>
-              <p className="text-sm text-gray-600 mb-4">
-                <strong>Location:</strong> {latestEvent.location}
-              </p>
+        {!hasRegistration && latestEvent && (
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Latest event</p>
+                <h3 className="text-xl font-semibold text-slate-900">{latestEvent.name}</h3>
+                <p className="text-slate-600 mt-1">
+                  {new Date(latestEvent.date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+                <p className="text-slate-600 mt-2 line-clamp-2">{latestEvent.description}</p>
+                <p className="text-sm text-slate-500 mt-2">Location: {latestEvent.location}</p>
+              </div>
               <Link
                 href={`/register/${latestEvent.id}`}
-                className="inline-block px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-indigo-600 text-white font-medium shadow hover:bg-indigo-700"
               >
-                Register for Event →
+                Register now
               </Link>
             </div>
           </div>
-        ) : !hasRegistration && !latestEvent ? (
-          <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">Latest Event</h3>
-            <p className="text-gray-600">No events available at the moment.</p>
-          </div>
-        ) : null}
+        )}
 
-        {/* Show user's registrations if any */}
+        {!hasRegistration && !latestEvent && (
+          <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-5 text-center text-slate-600">
+            No events are open right now. Check back soon.
+          </div>
+        )}
+
         <UserRegistrationsSection />
       </div>
     );
@@ -284,57 +300,41 @@ export default function UnifiedDashboard() {
   // Admin Dashboard
   if (role === 'admin') {
     return (
-      <div className="space-y-4 md:space-y-6">
-        <h2 className="text-xl md:text-2xl font-bold">Admin Dashboard</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          <Link href="/dashboard/events" className="bg-white p-4 md:p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-            <p className="text-gray-600 font-medium text-sm md:text-base">Total Events</p>
-            <p className="text-2xl md:text-3xl font-bold mt-1 md:mt-2">{stats.events || 0}</p>
-          </Link>
-
-          <Link href="/dashboard/users" className="bg-white p-4 md:p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-            <p className="text-gray-600 font-medium text-sm md:text-base">Total Users</p>
-            <p className="text-2xl md:text-3xl font-bold mt-1 md:mt-2">{stats.users || 0}</p>
-          </Link>
-
-          <Link href="/dashboard/users?filter=applicant" className="bg-white p-4 md:p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-            <p className="text-gray-600 font-medium text-sm md:text-base">Pending Approvals</p>
-            <p className="text-2xl md:text-3xl font-bold mt-1 md:mt-2 text-amber-600">{stats.pendingApprovals || 0}</p>
-          </Link>
-
-          <Link href="/dashboard/scan-logs" className="bg-white p-4 md:p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-            <p className="text-gray-600 font-medium text-sm md:text-base">Scan Logs</p>
-            <p className="text-2xl md:text-3xl font-bold mt-1 md:mt-2 text-red-600">{stats.failedScans || 0}</p>
-            <p className="text-xs text-gray-500 mt-2">Failed scans · Click to view all</p>
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600">Organizers</p>
-            <p className="text-xl font-bold text-purple-600">{stats.organizers || 0}</p>
+      <div className="space-y-6 md:space-y-8">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Admin</p>
+            <h2 className="text-2xl font-semibold text-slate-900">Overview</h2>
+            <p className="text-slate-600 mt-1">Monitor events, people, and scan health at a glance.</p>
           </div>
-          <div className="bg-teal-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600">Volunteers</p>
-            <p className="text-xl font-bold text-teal-600">{stats.volunteers || 0}</p>
-          </div>
-          <div className="bg-green-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600">Participants</p>
-            <p className="text-xl font-bold text-green-600">{stats.participants || 0}</p>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/dashboard/users" className="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium shadow hover:bg-indigo-700">Manage users</Link>
+            <Link href="/dashboard/scan-logs" className="inline-flex items-center px-4 py-2 rounded-lg border border-slate-200 text-slate-700 text-sm font-medium hover:border-indigo-200">
+              Scan logs
+            </Link>
           </div>
         </div>
 
-        <h3 className="text-lg md:text-xl font-semibold mt-6 md:mt-8 mb-3 md:mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-          <Link href="/dashboard/users" 
-            className="bg-purple-100 hover:bg-purple-200 text-purple-800 p-3 md:p-4 rounded-md font-medium transition-colors text-sm md:text-base">
-            Manage Users & Assign Organizers
-          </Link>
-          <Link href="/dashboard/analytics" 
-            className="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 p-3 md:p-4 rounded-md font-medium transition-colors text-sm md:text-base">
-            View Analytics
-          </Link>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <StatCard label="Total events" value={Number(stats.events || 0)} href="/dashboard/events" />
+          <StatCard label="Total users" value={Number(stats.users || 0)} href="/dashboard/users" accent="text-emerald-600" />
+          <StatCard label="Pending approvals" value={Number(stats.pendingApprovals || 0)} href="/dashboard/users?filter=applicant" accent="text-amber-600" />
+          <StatCard label="Failed scans" value={Number(stats.failedScans || 0)} href="/dashboard/scan-logs" helper="Tap to review errors" accent="text-rose-600" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <p className="text-sm text-slate-500">Organizers</p>
+            <p className="text-2xl font-semibold text-indigo-600 mt-1">{stats.organizers || 0}</p>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <p className="text-sm text-slate-500">Volunteers</p>
+            <p className="text-2xl font-semibold text-teal-600 mt-1">{stats.volunteers || 0}</p>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <p className="text-sm text-slate-500">Participants</p>
+            <p className="text-2xl font-semibold text-emerald-600 mt-1">{stats.participants || 0}</p>
+          </div>
         </div>
       </div>
     );
@@ -343,47 +343,24 @@ export default function UnifiedDashboard() {
   // Organizer Dashboard
   if (role === 'organizer') {
     return (
-      <div className="space-y-4 md:space-y-6">
-        <h2 className="text-xl md:text-2xl font-bold">Organizer Dashboard</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          <Link href="/dashboard/events" className="bg-white p-4 md:p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-            <p className="text-gray-600 font-medium text-sm md:text-base">My Events</p>
-            <p className="text-2xl md:text-3xl font-bold mt-1 md:mt-2">{stats.events}</p>
-          </Link>
-
-          <Link href="/dashboard/volunteers" className="bg-white p-4 md:p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-            <p className="text-gray-600 font-medium text-sm md:text-base">My Volunteers</p>
-            <p className="text-2xl md:text-3xl font-bold mt-1 md:mt-2">{stats.volunteers}</p>
-          </Link>
-
-          <Link href="/dashboard/events" className="bg-white p-4 md:p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-            <p className="text-gray-600 font-medium text-sm md:text-base">Pending Registrations</p>
-            <p className="text-xs text-gray-500">Select an event to review</p>
-            <p className="text-2xl md:text-3xl font-bold mt-1 md:mt-2 text-amber-600">{stats.pendingRegistrations}</p>
-          </Link>
-
-          <Link href="/dashboard/scan-logs" className="bg-white p-4 md:p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-            <p className="text-gray-600 font-medium text-sm md:text-base">Scan Logs</p>
-            <p className="text-2xl md:text-3xl font-bold mt-1 md:mt-2 text-blue-600">{stats.failedScans || 0}</p>
-            <p className="text-xs text-gray-500 mt-2">Failed scans · Click to view all</p>
-          </Link>
+      <div className="space-y-6 md:space-y-8">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Organizer</p>
+            <h2 className="text-2xl font-semibold text-slate-900">Your events</h2>
+            <p className="text-slate-600 mt-1">Track registrations and volunteer coverage.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/dashboard/events/create" className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium shadow hover:bg-blue-700">Create event</Link>
+            <Link href="/dashboard/volunteers" className="inline-flex items-center px-4 py-2 rounded-lg border border-slate-200 text-slate-700 text-sm font-medium hover:border-blue-200">Volunteers</Link>
+          </div>
         </div>
 
-        <h3 className="text-lg md:text-xl font-semibold mt-6 md:mt-8 mb-3 md:mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          <Link href="/dashboard/events/create" 
-            className="bg-blue-100 hover:bg-blue-200 text-blue-800 p-3 md:p-4 rounded-md font-medium transition-colors text-sm md:text-base">
-            Create New Event
-          </Link>
-          <Link href="/dashboard/events" 
-            className="bg-amber-100 hover:bg-amber-200 text-amber-800 p-3 md:p-4 rounded-md font-medium transition-colors text-sm md:text-base">
-            Manage Events
-          </Link>
-          <Link href="/dashboard/volunteers" 
-            className="bg-teal-100 hover:bg-teal-200 text-teal-800 p-3 md:p-4 rounded-md font-medium transition-colors text-sm md:text-base">
-            Manage Volunteers
-          </Link>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <StatCard label="My events" value={Number(stats.events || 0)} href="/dashboard/events" accent="text-blue-600" />
+          <StatCard label="Volunteers" value={Number(stats.volunteers || 0)} href="/dashboard/volunteers" accent="text-teal-600" />
+          <StatCard label="Pending registrations" value={Number(stats.pendingRegistrations || 0)} href="/dashboard/events" helper="Open an event to review" accent="text-amber-600" />
+          <StatCard label="Failed scans" value={Number(stats.failedScans || 0)} href="/dashboard/scan-logs" accent="text-indigo-600" />
         </div>
       </div>
     );

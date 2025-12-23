@@ -3,10 +3,10 @@ import { Registration } from '@/types';
 
 // Helper to convert database row to Registration object
 export function rowToRegistration(row: Record<string, unknown>): Registration {
-  const checkpointCheckIns = row.checkpoint_checkins 
-    ? JSON.parse(row.checkpoint_checkins as string) 
+  const checkpointCheckIns = row.checkpoint_checkins
+    ? JSON.parse(row.checkpoint_checkins as string)
     : [];
-  
+
   return {
     id: row.id as string,
     eventId: row.event_id as string,
@@ -30,7 +30,7 @@ export async function createRegistration(
 ): Promise<Registration> {
   const now = Date.now();
   const id = crypto.randomUUID();
-  
+
   await turso.execute({
     sql: `
       INSERT INTO registrations (id, event_id, user_id, responses, status, qr_code, checkpoint_checkins, created_at, updated_at)
@@ -123,38 +123,38 @@ export async function getUserEventRegistration(userId: string, eventId: string):
 
 // Check in a participant at a specific checkpoint
 export async function checkInParticipantAtCheckpoint(
-  qrCode: string, 
+  qrCode: string,
   checkpoint: string,
   volunteerId: string
 ): Promise<Registration | null> {
   const now = Date.now();
-  
+
   // Get the current registration
   const registration = await getRegistrationByQRCode(qrCode);
-  
+
   // Registration must exist and be either approved or already checked-in
   if (!registration || (registration.status !== 'approved' && registration.status !== 'checked-in')) {
     return null;
   }
-  
+
   // Add new checkpoint check-in
   const checkpointCheckIns = registration.checkpointCheckIns || [];
-  
+
   // Check if already checked in at this checkpoint
   const alreadyCheckedIn = checkpointCheckIns.some(c => c.checkpoint === checkpoint);
   if (alreadyCheckedIn) {
     return registration; // Already checked in at this checkpoint
   }
-  
+
   checkpointCheckIns.push({
     checkpoint,
     checkedInBy: volunteerId,
     checkedInAt: new Date(now)
   });
-  
+
   // Update status to 'checked-in' on first checkpoint check-in
   const newStatus = checkpointCheckIns.length > 0 ? 'checked-in' : registration.status;
-  
+
   await turso.execute({
     sql: `
       UPDATE registrations 
@@ -171,7 +171,7 @@ export async function checkInParticipantAtCheckpoint(
       qrCode
     ]
   });
-  
+
   return getRegistrationByQRCode(qrCode);
 }
 
@@ -180,73 +180,13 @@ export async function checkInParticipant(qrCode: string, volunteerId: string): P
   return checkInParticipantAtCheckpoint(qrCode, 'Registration', volunteerId);
 }
 
-// Get event analytics
-export async function getEventAnalytics(eventId: string): Promise<{ 
-  registered: number;
-  checkedIn: number;
-  checkInRate: number;
-}> {
-  const registrations = await getEventRegistrations(eventId);
-  
-  const registered = registrations.length;
-  const checkedIn = registrations.filter(r => r.status === 'checked-in').length;
-  const checkInRate = registered > 0 ? (checkedIn / registered) : 0;
-  
-  return {
-    registered,
-    checkedIn,
-    checkInRate
-  };
-}
-
-// Get detailed event analytics with form field breakdown
-export async function getDetailedEventAnalytics(eventId: string): Promise<{
-  registered: number;
-  checkedIn: number;
-  checkInRate: number;
-  fieldResponses: Record<string, Record<string, number>>;
-}> {
-  const registrations = await getEventRegistrations(eventId);
-  
-  const registered = registrations.length;
-  const checkedIn = registrations.filter(r => r.status === 'checked-in').length;
-  const checkInRate = registered > 0 ? (checkedIn / registered) : 0;
-  
-  // Analyze form responses
-  const fieldResponses: Record<string, Record<string, number>> = {};
-  
-  registrations.forEach(registration => {
-    Object.entries(registration.responses).forEach(([field, value]) => {
-      if (!fieldResponses[field]) {
-        fieldResponses[field] = {};
-      }
-      
-      // Handle different types of values
-      const stringValue = String(value);
-      
-      if (!fieldResponses[field][stringValue]) {
-        fieldResponses[field][stringValue] = 0;
-      }
-      
-      fieldResponses[field][stringValue]++;
-    });
-  });
-  
-  return {
-    registered,
-    checkedIn,
-    checkInRate,
-    fieldResponses
-  };
-}
-
 // Approve a registration
 export async function approveRegistration(
-  registrationId: string, 
+  registrationId: string,
   approvedBy: string
 ): Promise<Registration | null> {
   const now = Date.now();
-  
+
   await turso.execute({
     sql: `
       UPDATE registrations 
@@ -255,17 +195,17 @@ export async function approveRegistration(
     `,
     args: ['approved', approvedBy, now, now, registrationId]
   });
-  
+
   return getRegistrationById(registrationId);
 }
 
 // Reject a registration
 export async function rejectRegistration(
-  registrationId: string, 
+  registrationId: string,
   rejectedBy: string
 ): Promise<Registration | null> {
   const now = Date.now();
-  
+
   await turso.execute({
     sql: `
       UPDATE registrations 
@@ -274,7 +214,7 @@ export async function rejectRegistration(
     `,
     args: ['rejected', rejectedBy, now, now, registrationId]
   });
-  
+
   return getRegistrationById(registrationId);
 }
 

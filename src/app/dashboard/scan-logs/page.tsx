@@ -87,117 +87,97 @@ export default function ScanLogsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
-      <div className="mb-6">
-        <div className="flex items-center gap-4 mb-2">
-          <Link href="/dashboard" className="text-indigo-600 hover:text-indigo-800">
-            ← Back to Dashboard
-          </Link>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="mx-6 pt-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Scan Activity Logs</h1>
+          <p className="text-slate-500 mt-1">
+            {session.user.role === 'admin'
+              ? 'All scan attempts across events'
+              : 'Scan attempts for your events'}
+          </p>
         </div>
-        <h1 className="text-2xl md:text-3xl font-bold">Scan Activity Logs</h1>
-        <p className="text-gray-600 mt-1">
-          {session.user.role === 'admin' 
-            ? 'View all scan attempts across all events' 
-            : 'View scan attempts for your events'}
-        </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
-        <div className="flex flex-col gap-4 mb-6">
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-wrap items-start sm:items-center justify-between">
-            <div className="flex gap-2 flex-wrap">
-              {/* Action Buttons */}
-              <button
-                onClick={fetchFailedScans}
-                disabled={loadingScans}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm font-medium"
-                title="Refresh scan logs"
-              >
-                <svg className={`w-4 h-4 ${loadingScans ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Refresh
-              </button>
-            </div>
-            
-            {/* Filter Buttons */}
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => setFilterStatus('all')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  filterStatus === 'all' 
-                    ? 'bg-indigo-600 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+      {/* Filter and Action Buttons */}
+      <div className="mx-6 space-y-4">
+        <div className="flex gap-3 flex-wrap items-center">
+          <button
+            onClick={fetchFailedScans}
+            disabled={loadingScans}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2 text-sm font-medium"
+            title="Refresh scan logs"
+          >
+            <svg className={`w-4 h-4 ${loadingScans ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
+
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setFilterStatus('all')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterStatus === 'all'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
-              >
-                All ({failedScans.length})
-              </button>
-              <button
-                onClick={() => setFilterStatus('success')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  filterStatus === 'success' 
-                    ? 'bg-green-600 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            >
+              All ({failedScans.length})
+            </button>
+            <button
+              onClick={() => setFilterStatus('success')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterStatus === 'success'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
-              >
-                Success ({failedScans.filter(s => s.scanStatus === 'success').length})
-              </button>
-              <button
-                onClick={() => setFilterStatus('failed')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  filterStatus === 'failed' 
-                    ? 'bg-red-600 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            >
+              Success ({failedScans.filter(s => s.scanStatus === 'success').length})
+            </button>
+            <button
+              onClick={() => setFilterStatus('failed')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterStatus === 'failed'
+                  ? 'bg-rose-600 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
-              >
-                Failed ({failedScans.filter(s => s.scanStatus !== 'success').length})
-              </button>
-            </div>
+            >
+              Failed ({failedScans.filter(s => s.scanStatus !== 'success').length})
+            </button>
           </div>
         </div>
-        
-        {loadingScans ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading scan logs...</p>
-          </div>
-        ) : failedScans.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <p className="text-lg font-medium">No scan logs found</p>
-            <p className="text-sm mt-1">Scan logs will appear here once volunteers start checking in participants</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto -mx-4 md:mx-0">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+      </div>
+
+      {/* Main Content */}
+      {loadingScans ? (
+        <div className="mx-6 text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Loading scan logs...</p>
+        </div>
+      ) : failedScans.length === 0 ? (
+        <div className="mx-6 bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
+          <svg className="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p className="text-lg font-semibold text-slate-900">No scan logs yet</p>
+          <p className="text-sm text-slate-500 mt-1">Scan logs will appear once volunteers check in participants</p>
+        </div>
+      ) : (
+        <div className="mx-6 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Time
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Event
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Checkpoint
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Volunteer
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Status
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Details
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    User
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs uppercase tracking-wide font-medium text-slate-500">Time</th>
+                  <th className="px-6 py-3 text-left text-xs uppercase tracking-wide font-medium text-slate-500">Event</th>
+                  <th className="px-6 py-3 text-left text-xs uppercase tracking-wide font-medium text-slate-500">Checkpoint</th>
+                  <th className="px-6 py-3 text-left text-xs uppercase tracking-wide font-medium text-slate-500">Volunteer</th>
+                  <th className="px-6 py-3 text-left text-xs uppercase tracking-wide font-medium text-slate-500">Status</th>
+                  <th className="px-6 py-3 text-left text-xs uppercase tracking-wide font-medium text-slate-500">Details</th>
+                  <th className="px-6 py-3 text-left text-xs uppercase tracking-wide font-medium text-slate-500">Participant</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-slate-200">
                 {failedScans
                   .filter(scan => {
                     if (filterStatus === 'all') return true;
@@ -206,77 +186,105 @@ export default function ScanLogsPage() {
                     return true;
                   })
                   .map((scan) => (
-                  <tr key={scan.id} className={`hover:bg-gray-50 ${
-                    scan.scanStatus === 'success' ? 'bg-green-50/30' : ''
-                  }`}>
-                    <td className="px-3 py-3 text-xs text-gray-900 whitespace-nowrap">
-                      {new Date(scan.timestamp).toLocaleString('en-IN', {
-                        day: '2-digit',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </td>
-                    <td className="px-3 py-3 text-sm text-gray-900">
-                      <div className="max-w-[120px] truncate" title={scan.eventName || 'Unknown'}>
-                        {scan.eventName || 'Unknown'}
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 text-sm text-gray-900 whitespace-nowrap">
-                      {scan.checkpoint || '-'}
-                    </td>
-                    <td className="px-3 py-3 text-sm text-gray-900">
-                      <div className="max-w-[150px]">
-                        <div className="font-medium truncate" title={scan.volunteerName || 'Unknown'}>
-                          {scan.volunteerName || 'Unknown'}
-                        </div>
-                        <div className="text-xs text-gray-500 truncate" title={scan.volunteerEmail || ''}>
-                          {scan.volunteerEmail}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 text-sm whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        scan.scanStatus === 'success' ? 'bg-green-100 text-green-800' :
-                        scan.scanStatus === 'invalid_qr' ? 'bg-red-100 text-red-800' :
-                        scan.scanStatus === 'not_found' ? 'bg-orange-100 text-orange-800' :
-                        scan.scanStatus === 'already_checked_in' ? 'bg-yellow-100 text-yellow-800' :
-                        scan.scanStatus === 'wrong_checkpoint' ? 'bg-purple-100 text-purple-800' :
-                        'bg-gray-100 text-gray-800'
+                    <tr key={scan.id} className={`hover:bg-slate-50 transition-colors ${scan.scanStatus === 'success' ? 'bg-emerald-50/30' : ''
                       }`}>
-                        {scan.scanStatus ? scan.scanStatus.replace(/_/g, ' ').toUpperCase() : 'UNKNOWN'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 text-sm">
-                      {scan.errorMessage ? (
-                        <div className="max-w-[200px] text-red-600 truncate" title={scan.errorMessage}>
-                          {scan.errorMessage}
-                        </div>
-                      ) : (
-                        <span className="text-gray-500">-</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-3 text-sm text-gray-900">
-                      {scan.userName ? (
-                        <div className="max-w-[150px]">
-                          <div className="font-medium truncate" title={scan.userName}>
-                            {scan.userName}
+                      <td className="px-6 py-3 text-xs text-slate-900 whitespace-nowrap">
+                        {new Date(scan.timestamp).toLocaleDateString()} <br className="md:hidden" /> {new Date(scan.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td className="px-6 py-3 text-sm text-slate-900 max-w-[140px] truncate">
+                        {scan.eventName || 'Unknown'}
+                      </td>
+                      <td className="px-6 py-3 text-sm text-slate-900 whitespace-nowrap">
+                        {scan.checkpoint || '-'}
+                      </td>
+                      <td className="px-6 py-3 text-sm text-slate-900 max-w-[150px]">
+                        <div className="font-medium truncate">{scan.volunteerName || 'Unknown'}</div>
+                        <div className="text-xs text-slate-500 truncate">{scan.volunteerEmail}</div>
+                      </td>
+                      <td className="px-6 py-3 text-sm whitespace-nowrap">
+                        <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${scan.scanStatus === 'success' ? 'bg-emerald-100 text-emerald-700' :
+                            scan.scanStatus === 'invalid_qr' ? 'bg-rose-100 text-rose-700' :
+                              scan.scanStatus === 'not_found' ? 'bg-amber-100 text-amber-700' :
+                                scan.scanStatus === 'already_checked_in' ? 'bg-blue-100 text-blue-700' :
+                                  scan.scanStatus === 'wrong_checkpoint' ? 'bg-purple-100 text-purple-700' :
+                                    'bg-slate-100 text-slate-700'
+                          }`}>
+                          {scan.scanStatus ? scan.scanStatus.replace(/_/g, ' ').toLowerCase() : 'unknown'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3 text-sm max-w-[180px]">
+                        {scan.errorMessage ? (
+                          <div className="text-rose-600 text-xs truncate" title={scan.errorMessage}>{scan.errorMessage}</div>
+                        ) : (
+                          <span className="text-slate-500 text-xs">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-3 text-sm text-slate-900 max-w-[150px]">
+                        {scan.userName ? (
+                          <div>
+                            <div className="font-medium truncate">{scan.userName}</div>
+                            <div className="text-xs text-slate-500 truncate">{scan.userEmail}</div>
                           </div>
-                          <div className="text-xs text-gray-500 truncate" title={scan.userEmail || ''}>
-                            {scan.userEmail}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-gray-500">-</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                        ) : (
+                          <span className="text-slate-500 text-xs">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden divide-y divide-slate-200">
+            {failedScans
+              .filter(scan => {
+                if (filterStatus === 'all') return true;
+                if (filterStatus === 'success') return scan.scanStatus === 'success';
+                if (filterStatus === 'failed') return scan.scanStatus !== 'success';
+                return true;
+              })
+              .map((scan) => (
+                <div key={scan.id} className={`p-4 space-y-2 ${scan.scanStatus === 'success' ? 'bg-emerald-50/30' : ''}`}>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs text-slate-500">{new Date(scan.timestamp).toLocaleDateString()}</p>
+                      <p className="text-sm font-medium text-slate-900">{scan.eventName || 'Unknown Event'}</p>
+                    </div>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${scan.scanStatus === 'success' ? 'bg-emerald-100 text-emerald-700' :
+                        scan.scanStatus === 'invalid_qr' ? 'bg-rose-100 text-rose-700' :
+                          scan.scanStatus === 'not_found' ? 'bg-amber-100 text-amber-700' :
+                            scan.scanStatus === 'already_checked_in' ? 'bg-blue-100 text-blue-700' :
+                              scan.scanStatus === 'wrong_checkpoint' ? 'bg-purple-100 text-purple-700' :
+                                'bg-slate-100 text-slate-700'
+                      }`}>
+                      {scan.scanStatus ? scan.scanStatus.replace(/_/g, ' ').toLowerCase() : 'unknown'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-xs text-slate-500">Checkpoint</p>
+                      <p className="font-medium text-slate-900">{scan.checkpoint || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Volunteer</p>
+                      <p className="font-medium text-slate-900">{scan.volunteerName || 'Unknown'}</p>
+                    </div>
+                  </div>
+                  {scan.userName && (
+                    <div>
+                      <p className="text-xs text-slate-500">Participant</p>
+                      <p className="font-medium text-slate-900">{scan.userName}</p>
+                    </div>
+                  )}
+                  {scan.errorMessage && (
+                    <div className="text-xs text-rose-600 bg-rose-50 p-2 rounded">{scan.errorMessage}</div>
+                  )}
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

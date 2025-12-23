@@ -78,97 +78,112 @@ export default function SharedDashboardLayout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const colors = colorSchemes[colorScheme];
+  const isActive = (href: string) => {
+    if (pathname === href) return true;
+    // Avoid false positives: /dashboard shouldn't match /dashboard/events
+    if (href === '/dashboard') return false;
+    return pathname.startsWith(`${href}/`);
+  };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col min-h-screen">
-        <header className="bg-white shadow-sm flex-shrink-0">
-          <div className="px-4 py-3 md:px-6 md:py-4 flex justify-between items-center">
-            <h1 className="text-lg md:text-xl font-semibold text-gray-800">{title}</h1>
-            
-            {/* Mobile menu button - inline in header */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`md:hidden ${colors.bg} text-white p-2 rounded-md`}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+    <div className="flex min-h-screen bg-slate-50 text-slate-900">
+      {/* Sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-72 ${colors.bg} text-white px-4 py-6 md:px-6 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+      >
+        <div className="flex items-center justify-between mb-8">
+          <div className="text-2xl font-bold leading-tight">
+            <div>eloop</div>
+            <span className={`inline-block mt-1 text-xs font-semibold ${colors.bgLight} px-2 py-1 rounded`}>{roleLabel}</span>
           </div>
-        </header>
-        <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
-      </div>
-
-      {/* Dashboard Sidebar */}
-      <div className={`fixed inset-y-0 right-0 z-40 w-64 ${colors.bg} text-white p-4 md:p-6 flex flex-col transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:inset-0 ${
-        isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-      }`}>
-        <div className="mb-8">
-          <div
-            className="text-2xl font-bold cursor-default"
+          <button
+            className="md:hidden text-white/80 hover:text-white"
             onClick={() => setIsMobileMenuOpen(false)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsMobileMenuOpen(false); }}
+            aria-label="Close menu"
           >
-            eloop <span className={`text-sm ${colors.bgLight} text-white px-2 py-1 rounded`}>{roleLabel}</span>
-          </div>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
-        <nav className="flex-1 space-y-1">
+        <nav className="flex-1 space-y-8 overflow-y-auto pr-1">
           {navigation.map((section, sectionIndex) => (
-            <div key={sectionIndex}>
+            <div key={sectionIndex} className="space-y-3">
               {section.title && (
-                <div className={`py-2 px-3 mb-2 ${sectionIndex > 0 ? 'mt-6' : ''} ${colors.textLight} text-xs uppercase font-medium`}>
-                  {section.title}
-                </div>
+                <div className={`px-2 text-[11px] uppercase tracking-widest ${colors.textLight}`}>{section.title}</div>
               )}
-              {!section.title && sectionIndex > 0 && (
-                <div className="mt-6"></div>
-              )}
-              {section.items.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`block py-2 px-3 rounded ${colors.bgHover}${
-                    pathname === item.href ? ` ${colors.bgLight}` : ''
-                  }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              ))}
+              <div className="space-y-2">
+                {section.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`block px-4 py-3 rounded-lg transition-colors text-sm font-medium ${isActive(item.href)
+                        ? `${colors.bgLight} text-white shadow-sm`
+                        : `${colors.bgHover} text-white/90 hover:text-white`
+                      }`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
             </div>
           ))}
 
-          {/* Additional links (like role switching) */}
           {additionalLinks}
-
-          {/* Sign out */}
-          <div className="mt-2">
-            <SignOutButton className={`block w-full text-left py-2 px-3 rounded ${colors.bgHover} text-red-300`} />
-          </div>
         </nav>
 
-        <div className={`pt-6 mt-6 border-t ${colors.border}`}>
-          <div className="flex items-center">
-            <div className={`w-8 h-8 rounded-full ${colors.bgLight} flex items-center justify-center mr-2`}>
-              {userName?.charAt(0)}
-            </div>
-            <div>
-              <div className="font-medium">{userName}</div>
-              <div className={`text-xs ${colors.textLight} capitalize`}>{roleLabel}</div>
+        <div className={`pt-4 mt-4 border-t ${colors.border}`}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center">
+              <div className={`w-10 h-10 rounded-full ${colors.bgLight} flex items-center justify-center mr-3 text-lg font-semibold`}>
+                {userName?.charAt(0) || '?'}
+              </div>
+              <div>
+                <div className="font-semibold leading-tight">{userName || 'User'}</div>
+                <div className={`text-xs ${colors.textLight} capitalize`}>{roleLabel}</div>
+              </div>
             </div>
           </div>
+          <SignOutButton className={`w-full text-left px-3 py-2 rounded-lg ${colors.bgHover} text-red-200 hover:text-red-100`} />
         </div>
+      </aside>
+
+      {/* Content */}
+      <div className="flex-1 flex flex-col min-h-screen md:ml-72">
+        <header className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-slate-200">
+          <div className="flex items-center justify-between px-4 py-3 md:px-8">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className={`md:hidden ${colors.bg} text-white p-2 rounded-md shadow`}
+                aria-label="Open menu"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <div>
+                <p className="text-xs text-slate-500">Dashboard</p>
+                <h1 className="text-lg md:text-xl font-semibold text-slate-900">{title}</h1>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+          <div className="max-w-6xl mx-auto w-full space-y-6 md:space-y-8">
+            {children}
+          </div>
+        </main>
       </div>
 
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black bg-opacity-50 md:hidden"
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}

@@ -43,7 +43,7 @@ export default function EventPage({ params }: PageParams) {
   // Unwrap the params Promise using React.use()
   const resolvedParams = use(params);
   const eventId = resolvedParams.id;
-  
+
   const router = useRouter();
   const { data: session } = useSession();
   const [event, setEvent] = useState<EventDetails | null>(null);
@@ -57,11 +57,11 @@ export default function EventPage({ params }: PageParams) {
     const fetchEvent = async () => {
       try {
         const response = await fetch(`/api/events/${eventId}`);
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch event: ${response.status}`);
         }
-        
+
         const data = await response.json();
         setEvent(data.event);
       } catch (err) {
@@ -85,7 +85,7 @@ export default function EventPage({ params }: PageParams) {
       try {
         setLoadingPending(true);
         const response = await fetch(`/api/events/${eventId}/pending-registrations`);
-        
+
         if (response.ok) {
           const data = await response.json();
           setPendingRegistrations(data.registrations || []);
@@ -221,14 +221,12 @@ export default function EventPage({ params }: PageParams) {
       }
 
       const data = await response.json();
-      
+
       // Update local state
       setEvent(prev => prev ? {
         ...prev,
         isRegistrationOpen: data.event.isRegistrationOpen
       } : null);
-      
-      alert(data.message);
     } catch (err) {
       console.error('Error toggling registration:', err);
       alert(`Failed to toggle registration: ${(err as Error).message}`);
@@ -237,11 +235,11 @@ export default function EventPage({ params }: PageParams) {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/2 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+      <div className="mx-6 py-12">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-slate-200 rounded-lg w-1/2"></div>
+          <div className="h-4 bg-slate-200 rounded-lg w-full"></div>
+          <div className="h-4 bg-slate-200 rounded-lg w-3/4"></div>
         </div>
       </div>
     );
@@ -249,13 +247,16 @@ export default function EventPage({ params }: PageParams) {
 
   if (error || !event) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
+      <div className="mx-6 py-12">
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 px-5 py-4 rounded-xl space-y-2">
           <p className="font-medium">Error: {error || 'Event not found'}</p>
-          <p>The event you&apos;re looking for might have been removed or doesn&apos;t exist.</p>
+          <p className="text-sm">The event you're looking for might have been removed or doesn't exist.</p>
         </div>
-        <Link href="/dashboard/events" className="text-indigo-600 hover:text-indigo-800">
-          ← Back to all events
+        <Link href="/dashboard/events" className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium mt-6">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Events
         </Link>
       </div>
     );
@@ -276,199 +277,206 @@ export default function EventPage({ params }: PageParams) {
   });
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <Link href="/dashboard/events" className="text-indigo-600 hover:text-indigo-800">
-          ← Back to all events
+    <div className="space-y-6">
+      {/* Breadcrumb Navigation */}
+      <div className="mx-6 pt-6">
+        <Link href="/dashboard/events" className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Events
         </Link>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow mb-6">
-        <div className="flex justify-between items-start mb-4">
-          <h1 className="text-2xl font-bold">{event.name}</h1>
-          
-          <div className="flex space-x-3">
+      {/* Header with Title and Actions */}
+      <div className="mx-6">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl font-semibold text-slate-900 break-words">{event.name}</h1>
+            <p className="text-slate-500 mt-2">{event.description}</p>
+          </div>
+
+          <div className="flex gap-3 flex-shrink-0 w-full md:w-auto">
             {/* Register button - only show for participants/applicants, not organizers/admins */}
             {session && !['admin', 'organizer'].includes(session.user.role) ? (
               <button
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                className="flex-1 md:flex-none px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium transition-colors text-sm"
                 onClick={() => router.push(`/register/${event.id}`)}
               >
-                Register for Event
+                Register
               </button>
             ) : !session && (
               <Link
                 href="/auth/signin"
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                className="flex-1 md:flex-none px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium transition-colors text-sm text-center"
               >
-                Sign In to Register
+                Sign In
               </Link>
             )}
 
             {session?.user?.role && ['admin', 'organizer', 'volunteer'].includes(session.user.role) && (
-              <button
-                className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-md hover:bg-indigo-100"
-                onClick={() => router.push(`/dashboard/events/${event.id}/registrations`)}
+              <Link
+                href={`/dashboard/events/${event.id}/registrations`}
+                className="flex-1 md:flex-none px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 font-medium transition-colors text-sm text-center"
               >
-                View Registrations
-              </button>
+                Registrations
+              </Link>
             )}
           </div>
         </div>
+      </div>
 
-        
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-lg font-medium mb-2">Date & Time</h2>
-            <p>{formattedDate} at {formattedTime}</p>
-          </div>
-          
-          <div>
-            <h2 className="text-lg font-medium mb-2">Location</h2>
-            <p>{event.location}</p>
-          </div>
-          
-          <div>
-            <h2 className="text-lg font-medium mb-2">Description</h2>
-            <p className="whitespace-pre-line">{event.description}</p>
+      {/* Event Info Cards */}
+      <div className="mx-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 space-y-2">
+          <p className="text-xs uppercase tracking-wide font-medium text-slate-500">Date & Time</p>
+          <p className="text-lg font-semibold text-slate-900">{formattedDate}</p>
+          <p className="text-sm text-slate-600">at {formattedTime}</p>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 space-y-2">
+          <p className="text-xs uppercase tracking-wide font-medium text-slate-500">Location</p>
+          <p className="text-lg font-semibold text-slate-900">{event.location}</p>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 space-y-2">
+          <p className="text-xs uppercase tracking-wide font-medium text-slate-500">Registration Status</p>
+          <div className="flex items-center gap-2">
+            <span className={`inline-block w-2.5 h-2.5 rounded-full ${event.isRegistrationOpen ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+            <span className="text-lg font-semibold text-slate-900">
+              {event.isRegistrationOpen ? 'Open' : 'Closed'}
+            </span>
           </div>
         </div>
       </div>
-      
-      {/* Checkpoint Access Control - Only for Organizers/Admins */}
-      {session?.user?.role && ['admin', 'organizer'].includes(session.user.role) && 
-       event.checkpoints && event.checkpoints.length > 0 && (
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h2 className="text-xl font-medium mb-2">Checkpoint Access Control</h2>
-          <p className="text-gray-600 text-sm mb-4">
-            Check the boxes below to unlock checkpoints for volunteers. Volunteers can only scan participants at unlocked checkpoints.
-          </p>
-          
-          <div className="space-y-3">
-            {event.checkpoints.map((checkpoint, idx) => {
-              const isUnlocked = event.unlockedCheckpoints?.includes(checkpoint) ?? false;
-              // If unlocked, show its position in the unlockedCheckpoints array (reflects pick/unlock order)
-              const unlockedIdx = event.unlockedCheckpoints?.indexOf(checkpoint) ?? -1;
-              const displaySeq = unlockedIdx >= 0 ? unlockedIdx + 1 : idx + 1;
 
-              return (
-                <div 
-                  key={checkpoint} 
-                  className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <input
-                    type="checkbox"
-                    id={`checkpoint-${checkpoint}`}
-                    checked={isUnlocked}
-                    onChange={() => handleCheckpointToggle(checkpoint, isUnlocked)}
-                    disabled={!!actionLoading}
-                    className="h-5 w-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                  <div className="ml-3 flex-1 cursor-pointer flex items-center">
-                    <span className="inline-flex items-center justify-center mr-3 w-12 h-8 rounded-full bg-gray-100 text-sm font-semibold text-gray-700">
-                      {displaySeq}
-                    </span>
-                    <div>
-                      <div className="flex items-center">
-                        <span className="font-medium text-gray-900">{checkpoint}</span>
-                        {/* volunteer-visible sequence remains available via unlocked state */}
-                      </div>
-                      <div>
-                        <span className={`text-sm ${isUnlocked ? 'text-green-600' : 'text-gray-500'}`}>
-                          {isUnlocked ? '✅ Unlocked - Volunteers can scan' : '❌ Locked - Volunteers cannot scan'}
+      {/* Checkpoint Access Control - Only for Organizers/Admins */}
+      {session?.user?.role && ['admin', 'organizer'].includes(session.user.role) &&
+        event.checkpoints && event.checkpoints.length > 0 && (
+          <div className="mx-6 bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Checkpoint Access Control</h2>
+              <p className="text-sm text-slate-500 mt-1">
+                Unlock checkpoints for volunteers to scan participants. Only one non-registration checkpoint can be active at a time.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {event.checkpoints.map((checkpoint, idx) => {
+                const isUnlocked = event.unlockedCheckpoints?.includes(checkpoint) ?? false;
+
+                return (
+                  <label
+                    key={checkpoint}
+                    className="flex items-center p-4 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isUnlocked}
+                      onChange={() => handleCheckpointToggle(checkpoint, isUnlocked)}
+                      disabled={!!actionLoading}
+                      className="h-5 w-5 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 cursor-pointer disabled:opacity-50"
+                    />
+                    <div className="ml-4 flex-1">
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 text-sm font-semibold text-indigo-700">
+                          {idx + 1}
                         </span>
+                        <div>
+                          <span className="font-medium text-slate-900">{checkpoint}</span>
+                          <span className={`ml-3 text-sm font-medium ${isUnlocked ? 'text-emerald-600' : 'text-slate-500'}`}>
+                            {isUnlocked ? '✓ Unlocked' : 'Locked'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
+                  </label>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
-      
+        )}
+
       {/* Registration Control - Only for Organizers/Admins */}
       {session?.user?.role && ['admin', 'organizer'].includes(session.user.role) && (
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h2 className="text-xl font-medium mb-2">Registration Control</h2>
-          <p className="text-gray-600 text-sm mb-4">
-            Control whether new applicants can register for this event. When closed, the registration page will show a message that registration is currently closed.
-          </p>
-          
-          <div className="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+        <div className="mx-6 bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Registration Control</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Open or close registration for applicants to join this event.
+            </p>
+          </div>
+
+          <label className="flex items-center p-4 border-2 border-indigo-200 bg-indigo-50 rounded-xl cursor-pointer">
             <input
               type="checkbox"
-              id="registration-toggle"
               checked={event.isRegistrationOpen ?? true}
               onChange={() => handleRegistrationToggle(event.isRegistrationOpen ?? true)}
-              className="h-6 w-6 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              className="h-5 w-5 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             />
-            <label 
-              htmlFor="registration-toggle"
-              className="ml-4 flex-1 cursor-pointer"
-            >
-              <span className="font-semibold text-lg text-gray-900">Accept New Registrations</span>
-              <span className={`ml-3 text-base font-medium ${event.isRegistrationOpen ?? true ? 'text-green-600' : 'text-red-600'}`}>
-                {event.isRegistrationOpen ?? true ? '✅ Open - Applicants can register' : '🚫 Closed - Registration disabled'}
+            <div className="ml-4 flex-1">
+              <span className="font-semibold text-slate-900">Accept New Registrations</span>
+              <span className={`ml-3 text-sm font-medium ${event.isRegistrationOpen ?? true ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {event.isRegistrationOpen ?? true ? '✓ Open' : '✗ Closed'}
               </span>
-            </label>
-          </div>
+            </div>
+          </label>
         </div>
       )}
-      
+
       {/* Pending Registrations Section for Organizers/Admins */}
       {session?.user?.role && ['admin', 'organizer'].includes(session.user.role) && pendingRegistrations.length > 0 && (
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h2 className="text-xl font-medium mb-4 flex items-center">
-            <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm font-semibold mr-3">
+        <div className="mx-6 bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100 text-sm font-semibold text-amber-700">
               {pendingRegistrations.length}
             </span>
-            Pending Registrations
-          </h2>
-          
+            <h2 className="text-lg font-semibold text-slate-900">Pending Registrations</h2>
+          </div>
+
           {loadingPending ? (
-            <div className="text-gray-500">Loading pending registrations...</div>
+            <div className="text-slate-500">Loading pending registrations...</div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {pendingRegistrations.map((registration) => (
-                <div key={registration.id} className="border border-yellow-200 bg-yellow-50 rounded-lg p-4">
+                <div key={registration.id} className="border border-amber-200 bg-amber-50 rounded-xl p-4 space-y-3">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{registration.userName}</h3>
-                      <p className="text-gray-600 text-sm">{registration.userEmail}</p>
-                      <p className="text-gray-500 text-xs mt-1">
-                        Registered: {new Date(registration.createdAt).toLocaleString()}
+                      <h3 className="font-semibold text-slate-900">{registration.userName}</h3>
+                      <p className="text-sm text-slate-600">{registration.userEmail}</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Applied: {new Date(registration.createdAt).toLocaleDateString()} at {new Date(registration.createdAt).toLocaleTimeString()}
                       </p>
-                      
+
                       {/* Show registration responses */}
                       {registration.responses && Object.keys(registration.responses).length > 0 && (
-                        <div className="mt-3 space-y-1">
+                        <div className="mt-3 pt-3 border-t border-amber-200 space-y-2">
                           {Object.entries(registration.responses).map(([key, value]) => (
                             <div key={key} className="text-sm">
-                              <span className="font-medium text-gray-700">{key}:</span>{' '}
-                              <span className="text-gray-600">{String(value)}</span>
+                              <span className="font-medium text-slate-700">{key}</span>
+                              <span className="text-slate-600"> {String(value)}</span>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
-                    
-                    <div className="flex space-x-2 ml-4">
-                      <button
-                        onClick={() => handleApprove(registration.id)}
-                        disabled={actionLoading === registration.id}
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                      >
-                        {actionLoading === registration.id ? 'Approving...' : 'Approve'}
-                      </button>
-                      <button
-                        onClick={() => handleReject(registration.id)}
-                        disabled={actionLoading === registration.id}
-                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                      >
-                        {actionLoading === registration.id ? 'Rejecting...' : 'Reject'}
-                      </button>
-                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-3 border-t border-amber-200">
+                    <button
+                      onClick={() => handleApprove(registration.id)}
+                      disabled={actionLoading === registration.id}
+                      className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors"
+                    >
+                      {actionLoading === registration.id ? 'Approving...' : 'Approve'}
+                    </button>
+                    <button
+                      onClick={() => handleReject(registration.id)}
+                      disabled={actionLoading === registration.id}
+                      className="flex-1 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors"
+                    >
+                      {actionLoading === registration.id ? 'Rejecting...' : 'Reject'}
+                    </button>
                   </div>
                 </div>
               ))}
@@ -476,23 +484,24 @@ export default function EventPage({ params }: PageParams) {
           )}
         </div>
       )}
-      
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-xl font-medium mb-4">Registration Form</h2>
-        
+
+      {/* Registration Form */}
+      <div className="mx-6 bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-slate-900">Registration Form</h2>
+
         {event.formSchema?.fields ? (
-          <div className="space-y-6">
-            <p className="text-gray-600">
-              Participants will fill out the following fields when registering:
+          <>
+            <p className="text-slate-600 text-sm">
+              Participants complete these fields when registering:
             </p>
-            
-            <div className="space-y-3">
+
+            <div className="space-y-2">
               {event.formSchema.fields.map((field) => (
-                <div key={field.id} className="p-3 border border-gray-200 rounded-md">
+                <div key={field.id} className="p-3 border border-slate-200 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">{field.label}</p>
-                      <p className="text-sm text-gray-600">
+                      <p className="font-medium text-slate-900">{field.label}</p>
+                      <p className="text-xs text-slate-500 mt-1">
                         {field.type} · {field.required ? 'Required' : 'Optional'}
                       </p>
                     </div>
@@ -500,18 +509,18 @@ export default function EventPage({ params }: PageParams) {
                 </div>
               ))}
             </div>
-            
-            <div className="mt-6 flex justify-center">
+
+            <div className="flex gap-3 pt-4 border-t border-slate-100">
               <button
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors"
                 onClick={() => router.push(`/register/${event.id}`)}
               >
-                View Registration Page
+                Preview Registration
               </button>
             </div>
-          </div>
+          </>
         ) : (
-          <p className="text-gray-600">No registration form found for this event.</p>
+          <p className="text-slate-600">No registration form configured for this event.</p>
         )}
       </div>
     </div>
