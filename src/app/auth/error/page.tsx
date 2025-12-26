@@ -7,7 +7,7 @@ import Link from "next/link";
 function ErrorContent() {
   const searchParams = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string>("An unknown error occurred.");
-  
+
   useEffect(() => {
     const errorParam = searchParams.get("error");
     if (errorParam) {
@@ -42,7 +42,7 @@ function ErrorContent() {
       }
     }
   }, [searchParams]);
-  
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-6 bg-gray-50">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
@@ -62,7 +62,16 @@ function ErrorContent() {
 
 export default function AuthError() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense
+      fallback={(() => {
+        const ELogoLoader = require("@/components/ui/ELogoLoader").default;
+        return (
+          <div className="flex items-center justify-center min-h-[40vh]">
+            <ELogoLoader size={52} colorClass="text-red-600" label="Loading error details..." />
+          </div>
+        );
+      })()}
+    >
       <ErrorContent />
     </Suspense>
   );

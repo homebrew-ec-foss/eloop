@@ -29,12 +29,12 @@ export const EventCheckIn: React.FC<CheckInProps> = ({ eventId, onSuccess }) => 
 
   const handleScan = async (qrData: string) => {
     if (isProcessing) return;
-    
+
     try {
       setIsProcessing(true);
       setError(null);
       setScanResult(null);
-      
+
       // Call the check-in API
       const response = await fetch('/api/events/check-in', {
         method: 'POST',
@@ -43,23 +43,23 @@ export const EventCheckIn: React.FC<CheckInProps> = ({ eventId, onSuccess }) => 
         },
         body: JSON.stringify({ qrToken: qrData }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         setError(data.error || 'Failed to process check-in');
         return;
       }
-      
+
       // Make sure this QR code is for this event
       if (data.registration.eventId !== eventId) {
         setError('This QR code is for a different event');
         return;
       }
-      
+
       // Show success
       setScanResult(data);
-      
+
       // Call onSuccess callback if provided
       if (onSuccess) {
         onSuccess();
@@ -99,7 +99,7 @@ export const EventCheckIn: React.FC<CheckInProps> = ({ eventId, onSuccess }) => 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
       <h3 className="text-lg font-semibold mb-2">Check-In Participants</h3>
-      
+
       {isScanning ? (
         <div>
           <GenericQRScanner
@@ -118,7 +118,10 @@ export const EventCheckIn: React.FC<CheckInProps> = ({ eventId, onSuccess }) => 
         <div>
           {isProcessing ? (
             <div className="text-center py-8">
-              <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+              {(() => {
+                const ELogoLoader = require("@/components/ui/ELogoLoader").default;
+                return <ELogoLoader size={56} colorClass="text-blue-500" label="Loading data..." className="mb-4" />;
+              })()}
               <p className="text-gray-600">Processing check-in...</p>
             </div>
           ) : error ? (

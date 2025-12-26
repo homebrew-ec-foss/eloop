@@ -127,7 +127,10 @@ export default function DashboardLayout({
   if (status === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        {(() => {
+          const ELogoLoader = require("@/components/ui/ELogoLoader").default;
+          return <ELogoLoader size={56} colorClass="text-purple-600" label="Loading dashboard..." />;
+        })()}
       </div>
     );
   }

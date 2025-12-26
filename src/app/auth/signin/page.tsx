@@ -63,7 +63,7 @@ function SignInContent() {
             <span>Sign in with Google</span>
           </button>
         </div>
-        
+
         {/* Powered by footer */}
         <div className="mt-6 text-center text-sm text-gray-500 flex items-center justify-center gap-2">
           <span className="text-gray-400">powered by</span>
@@ -102,7 +102,16 @@ function SignInContent() {
 
 export default function SignIn() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense
+      fallback={(() => {
+        const ELogoLoader = require("@/components/ui/ELogoLoader").default;
+        return (
+          <div className="flex items-center justify-center min-h-[40vh]">
+            <ELogoLoader size={52} colorClass="text-indigo-600" label="Loading sign-in..." />
+          </div>
+        );
+      })()}
+    >
       <SignInContent />
     </Suspense>
   );
