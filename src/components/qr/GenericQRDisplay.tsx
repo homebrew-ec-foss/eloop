@@ -174,6 +174,12 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
   const [shadowStyle, setShadowStyle] = React.useState<string>('0 18px 42px rgba(2,6,23,0.10), 0 4px 12px rgba(2,6,23,0.06)');
   const [wobblePaused, setWobblePaused] = React.useState<boolean>(false);
 
+  // Idle pointer simulation (clockwise circular path around ticket center) drives parallax when not interacting
+  const idleRafRef = React.useRef<number | null>(null);
+  const idleStartRef = React.useRef<number | null>(null);
+  const IDLE_PERIOD = 5200; // ms, similar to prior wobble duration
+  const [idlePhase, setIdlePhase] = React.useState<number>(0);
+
   // Pointer processing function used by mouse/touch and idle simulation
   function processPointer(clientX: number, clientY: number) {
     const el = ticketRef.current;
@@ -208,16 +214,13 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
     });
   }
 
-  // Idle pointer simulation (clockwise circular path around ticket center) drives parallax when not interacting
-  const idleRafRef = React.useRef<number | null>(null);
-  const idleStartRef = React.useRef<number | null>(null);
-  const IDLE_PERIOD = 5200; // ms, similar to prior wobble duration
-
   React.useEffect(() => {
     function step(now: number) {
       if (idleStartRef.current === null) idleStartRef.current = now;
       const elapsed = now - (idleStartRef.current || 0);
       const t = (elapsed % IDLE_PERIOD) / IDLE_PERIOD; // 0..1
+
+      setIdlePhase(t);
 
       const el = ticketRef.current;
       if (el) {
@@ -251,6 +254,7 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
       idleRafRef.current = null;
     };
   }, [wobblePaused]);
+
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     // Parallax only active on desktop widths (>=768px)

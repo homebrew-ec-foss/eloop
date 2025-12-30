@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
     const registrations = await getUserRegistrations(userId);
     const activeReg = registrations.find(r => r.status === 'approved' || r.status === 'checked-in')
-                      || registrations.find(r => r.status === 'pending');
+      || registrations.find(r => r.status === 'pending');
 
     if (!activeReg) {
       return NextResponse.json({ hasRegistration: false, message: 'No active registration found', user });
@@ -46,7 +46,8 @@ export async function GET(request: Request) {
         status: activeReg.status,
         qrCode: activeReg.qrCode,
         checkpointCheckIns: activeReg.checkpointCheckIns || [],
-        createdAt: activeReg.createdAt
+        createdAt: activeReg.createdAt ? activeReg.createdAt.toISOString() : null,
+        approvedAt: activeReg.approvedAt ? activeReg.approvedAt.toISOString() : null
       },
       user: {
         id: user.id,

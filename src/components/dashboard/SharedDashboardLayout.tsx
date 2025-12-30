@@ -89,6 +89,8 @@ export default function SharedDashboardLayout({
   const pathname = usePathname();
   const { data: session } = useSession();
   const userName = session?.user?.name || '';
+  // Display only the first name in the compact sidebar; keep full name on hover via title
+  const displayName = userName ? userName.trim().split(/\s+/)[0] : 'User';
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const colors = colorSchemes[colorScheme];
@@ -103,11 +105,11 @@ export default function SharedDashboardLayout({
     <div className="flex min-h-screen bg-slate-50 text-slate-900">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-72 ${colors.bg} text-white px-4 py-6 md:px-6 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-40 w-56 ${colors.bg} text-white px-4 py-6 md:px-6 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
       >
         <div className="flex items-center justify-between mb-8">
-          <div className="text-2xl font-bold leading-tight">
+          <div className="text-xl font-bold leading-tight">
             <div>eloop</div>
             <span className={`inline-block mt-1 text-xs font-semibold ${colors.bgLight} px-2 py-1 rounded`}>{roleLabel}</span>
           </div>
@@ -149,24 +151,21 @@ export default function SharedDashboardLayout({
           {additionalLinks}
         </nav>
 
-        <div className={`pt-4 mt-4 border-t ${colors.border}`}>
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center">
-              <div className={`w-10 h-10 rounded-full ${colors.bgLight} flex items-center justify-center mr-3 text-lg font-semibold`}>
-                {userName?.charAt(0) || '?'}
-              </div>
-              <div>
-                <div className="font-semibold leading-tight">{userName || 'User'}</div>
-                <div className={`text-xs ${colors.textLight} capitalize`}>{roleLabel}</div>
-              </div>
+        <div className={`pt-3 mt-3 border-t ${colors.border}`}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold leading-tight" title={userName}>{displayName}</div>
+              <div className={`text-[11px] ${colors.textLight} capitalize`}>{roleLabel}</div>
+            </div>
+            <div className="ml-3 flex-shrink-0">
+              <SignOutButton className={`text-sm px-2 py-1 rounded ${colors.bgHover} text-red-200 hover:text-red-100`} />
             </div>
           </div>
-          <SignOutButton className={`w-full text-left px-3 py-2 rounded-lg ${colors.bgHover} text-red-200 hover:text-red-100`} />
         </div>
       </aside>
 
       {/* Content */}
-      <div className="flex-1 flex flex-col min-h-screen md:ml-72">
+      <div className="flex-1 flex flex-col min-h-screen md:ml-56">
         <header className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-slate-200">
           <div className="flex items-center justify-between px-4 py-3 md:px-8">
             <div className="flex items-center gap-3">

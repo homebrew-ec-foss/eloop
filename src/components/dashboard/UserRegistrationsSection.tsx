@@ -20,6 +20,8 @@ interface ActiveRegistration {
   qrCode: string;
   status: 'pending' | 'approved' | 'rejected' | 'checked-in';
   checkpointCheckIns: CheckpointCheckIn[];
+  createdAt?: string | null;
+  approvedAt?: string | null;
 }
 
 interface StatusData {
@@ -121,6 +123,18 @@ export default function UserRegistrationsSection({ viewAsUserId }: { viewAsUserI
     ? registration.checkpointCheckIns[registration.checkpointCheckIns.length - 1]
     : null;
 
+  // Build history items including signup and approval as pseudo-checkpoints
+  const historyItems: CheckpointCheckIn[] = [];
+  if (registration.createdAt) {
+    historyItems.push({ checkpoint: 'Signed up', checkedInBy: '', checkedInAt: registration.createdAt });
+  }
+  if (registration.approvedAt) {
+    // approvedBy is not part of ActiveRegistration here; leave checkedInBy blank
+    historyItems.push({ checkpoint: 'Approved', checkedInBy: '', checkedInAt: registration.approvedAt });
+  }
+  // Append any real checkpoint check-ins
+  historyItems.push(...registration.checkpointCheckIns);
+
   // Don't render anything for applicants with approved registrations - they'll be logged out
   if (session?.user?.role === 'applicant' &&
     registration.status === 'approved') {
@@ -148,6 +162,9 @@ export default function UserRegistrationsSection({ viewAsUserId }: { viewAsUserI
       <div className="w-full max-w-[480px]">
         <div className="bg-white shadow rounded-lg p-6 text-center">
           <h4 className="text-lg font-semibold text-gray-900 mb-2">Checkpoint Status</h4>
+
+
+
           {registration.status === 'pending' && (
             <>
               <div className="inline-flex items-center px-4 py-2 rounded-lg text-base font-medium bg-yellow-100 text-yellow-800">
@@ -176,18 +193,18 @@ export default function UserRegistrationsSection({ viewAsUserId }: { viewAsUserI
         </div>
 
         {/* Checkpoint Check-ins List */}
-        {registration.checkpointCheckIns.length > 0 && (
+        {historyItems.length > 0 && (
           <div className="mt-6 w-full">
             <h4 className="text-lg font-semibold text-gray-900 mb-4">Checkpoint History</h4>
             <div className="space-y-3">
-              {[...registration.checkpointCheckIns].reverse().map((checkIn, index) => (
+              {[...historyItems].reverse().map((checkIn, index) => (
                 <div
                   key={index}
                   className="flex items-start p-4 bg-gray-50 rounded-lg border border-gray-200"
                 >
                   <div className="flex-shrink-0 mt-1">
                     <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                      {registration.checkpointCheckIns.length - index}
+                      {historyItems.length - index}
                     </div>
                   </div>
                   <div className="ml-4 flex-grow">

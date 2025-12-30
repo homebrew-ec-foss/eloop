@@ -10,7 +10,7 @@ import { getEventById } from '@/lib/db/event';
 export async function GET() {
   try {
     const session = await auth();
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -20,10 +20,10 @@ export async function GET() {
 
     // Get user's registrations
     const registrations = await getUserRegistrations(session.user.id);
-    
+
     // Find the most recent registration (prioritize approved/checked-in, but also show pending)
-    const activeReg = registrations.find(r => r.status === 'approved' || r.status === 'checked-in') 
-                      || registrations.find(r => r.status === 'pending');
+    const activeReg = registrations.find(r => r.status === 'approved' || r.status === 'checked-in')
+      || registrations.find(r => r.status === 'pending');
 
     if (!activeReg) {
       return NextResponse.json({
@@ -35,7 +35,7 @@ export async function GET() {
     // Get event details
     const event = await getEventById(activeReg.eventId);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       hasRegistration: true,
       registration: {
         id: activeReg.id,
@@ -45,7 +45,8 @@ export async function GET() {
         status: activeReg.status,
         qrCode: activeReg.qrCode,
         checkpointCheckIns: activeReg.checkpointCheckIns || [],
-        createdAt: activeReg.createdAt
+        createdAt: activeReg.createdAt ? activeReg.createdAt.toISOString() : null,
+        approvedAt: activeReg.approvedAt ? activeReg.approvedAt.toISOString() : null
       },
       user: {
         id: session.user.id,

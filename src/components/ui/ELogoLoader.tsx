@@ -8,6 +8,9 @@ type ELogoLoaderProps = {
     label?: string;
     className?: string;
     trackOpacity?: number; // 0..1
+    // Optional idle animation hooks (optional; not required for normal use)
+    idlePhase?: number;
+    idleMode?: string;
 };
 
 export default function ELogoLoader({
@@ -16,6 +19,8 @@ export default function ELogoLoader({
     label,
     className = "",
     trackOpacity = 0.18,
+    idlePhase,
+    idleMode,
 }: ELogoLoaderProps) {
     const strokeWidth = Math.max(2, Math.round(size / 18));
     const radius = (size - strokeWidth) / 2;

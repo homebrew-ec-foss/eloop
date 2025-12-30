@@ -7,7 +7,7 @@ import { UserRole } from '@/types';
 export async function GET() {
   try {
     const session = await auth();
-    
+
     // User must be logged in
     if (!session?.user) {
       return NextResponse.json(
@@ -15,7 +15,7 @@ export async function GET() {
         { status: 401 }
       );
     }
-    
+
     // User must be admin or organizer
     if (session.user.role !== 'admin' && session.user.role !== 'organizer') {
       return NextResponse.json(
@@ -39,7 +39,7 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const session = await auth();
-    
+
     // User must be logged in
     if (!session?.user) {
       return NextResponse.json(
@@ -47,7 +47,7 @@ export async function PUT(request: Request) {
         { status: 401 }
       );
     }
-    
+
     // User must be admin
     if (session.user.role !== 'admin') {
       return NextResponse.json(
@@ -55,18 +55,18 @@ export async function PUT(request: Request) {
         { status: 403 }
       );
     }
-    
+
     // Parse request body
     const body = await request.json();
     const { userId, role } = body;
-    
+
     if (!userId || !role) {
       return NextResponse.json(
         { error: 'User ID and role are required' },
         { status: 400 }
       );
     }
-    
+
     // Validate role
     const validRoles: UserRole[] = ['admin', 'organizer', 'volunteer', 'participant'];
     if (!validRoles.includes(role as UserRole)) {
@@ -75,7 +75,7 @@ export async function PUT(request: Request) {
         { status: 400 }
       );
     }
-    
+
     // Don't allow admins to demote themselves
     if (userId === session.user.id) {
       return NextResponse.json(
@@ -83,17 +83,17 @@ export async function PUT(request: Request) {
         { status: 400 }
       );
     }
-    
+
     // Update user role
     const updatedUser = await updateUserRole(userId, role as UserRole);
-    
+
     if (!updatedUser) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       );
     }
-    
+
     return NextResponse.json({ user: updatedUser });
   } catch (error) {
     console.error('Error updating user role:', error);
@@ -130,13 +130,19 @@ export async function DELETE(request: Request) {
     }
 
     const { deleteUser } = await import('@/lib/db/user');
-    const deleted = await deleteUser(userId);
+    try {
+      const deleted = await deleteUser(userId);
 
-    if (!deleted) {
-      return NextResponse.json({ error: 'User not found or could not be deleted' }, { status: 404 });
+      if (!deleted) {
+        return NextResponse.json({ error: 'User not found or could not be deleted' }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true });
+    } catch (e) {
+      console.error('Error in deleteUser:', e instanceof Error ? e.message : e);
+      const message = e instanceof Error ? e.message : 'Failed to delete user';
+      return NextResponse.json({ error: message }, { status: 400 });
     }
-
-    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting user:', error);
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });

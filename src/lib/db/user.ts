@@ -18,7 +18,7 @@ function rowToUserProfile(row: Record<string, unknown>): UserProfile {
 export async function createUser(user: Omit<UserProfile, 'createdAt' | 'updatedAt'>): Promise<UserProfile> {
   console.log(`createUser function called with: ${JSON.stringify(user)}`);
   const now = Date.now();
-  
+
   try {
     const result = await turso.execute({
       sql: `
@@ -35,13 +35,13 @@ export async function createUser(user: Omit<UserProfile, 'createdAt' | 'updatedA
         now
       ]
     });
-    
+
     console.log(`User inserted into database. Result: ${JSON.stringify(result)}`);
-    
+
     // Verify the user was created by fetching it back
     const verifyUser = await getUserById(user.id);
     console.log(`User verification: ${verifyUser ? 'Success' : 'Failed'}`);
-    
+
     return {
       ...user,
       createdAt: new Date(now),
@@ -193,7 +193,86 @@ export async function countUsers(): Promise<number> {
 
 // Delete a user by id. Returns true if a row was deleted.
 export async function deleteUser(userId: string): Promise<boolean> {
-  // First, remove registrations that belong to this user
+  // Prevent deleting users who own non-nullable resources (events or teams)
+  try {
+    const eventsOwned = await turso.execute({ sql: `SELECT COUNT(*) as count FROM events WHERE organizer_id = ?`, args: [userId] });
+    const eventsCount = Number(eventsOwned.rows[0]?.count || 0);
+    if (eventsCount > 0) {
+      throw new Error('User owns events. Reassign or delete those events before deleting the user.');
+    }
+
+    const teamsOwned = await turso.execute({ sql: `SELECT COUNT(*) as count FROM teams WHERE created_by = ?`, args: [userId] });
+    const teamsCount = Number(teamsOwned.rows[0]?.count || 0);
+    if (teamsCount > 0) {
+      throw new Error('User created teams. Reassign or delete those teams before deleting the user.');
+    }
+  } catch (e) {
+    // If we threw a helpful error above, rethrow so callers can surface it
+    if (e instanceof Error) {
+      console.error('Pre-delete checks failed:', e.message);
+      throw e;
+    }
+  }
+
+  // Nullify references in registrations where this user acted as approver/rejector
+  try {
+    await turso.execute({
+      sql: `UPDATE registrations SET approved_by = NULL WHERE approved_by = ?`,
+      args: [userId],
+    });
+    await turso.execute({
+      sql: `UPDATE registrations SET rejected_by = NULL WHERE rejected_by = ?`,
+      args: [userId],
+    });
+  } catch (e) {
+    console.error('Failed to nullify registration approver/rejector references:', e);
+  }
+
+  // Nullify references in team_scores where this user graded teams
+  try {
+    await turso.execute({
+      sql: `UPDATE team_scores SET graded_by = NULL WHERE graded_by = ?`,
+      args: [userId],
+    });
+  } catch (e) {
+    console.error('Failed to nullify team_scores graded_by references:', e);
+  }
+
+  // Remove user from any teams.member_ids arrays
+  try {
+    const teamsWithMember = await turso.execute({
+      sql: `SELECT id, member_ids FROM teams WHERE member_ids LIKE ?`,
+      args: [`%${userId}%`],
+    });
+
+    for (const row of teamsWithMember.rows) {
+      try {
+        const id = row.id as string;
+        const memberIdsRaw = row.member_ids as string;
+        let members: string[] = [];
+        try {
+          members = JSON.parse(memberIdsRaw);
+        } catch (parseErr) {
+          console.warn(`Failed to parse member_ids for team ${id}:`, parseErr);
+          continue;
+        }
+
+        const newMembers = members.filter(m => m !== userId);
+        if (newMembers.length !== members.length) {
+          await turso.execute({
+            sql: `UPDATE teams SET member_ids = ? WHERE id = ?`,
+            args: [JSON.stringify(newMembers), id],
+          });
+        }
+      } catch (innerE) {
+        console.error('Failed to update team membership while deleting user:', innerE);
+      }
+    }
+  } catch (e) {
+    console.error('Failed to find teams containing user as member:', e);
+  }
+
+  // Delete registrations that belong to this user
   try {
     await turso.execute({
       sql: `DELETE FROM registrations WHERE user_id = ?`,
@@ -204,6 +283,7 @@ export async function deleteUser(userId: string): Promise<boolean> {
     // continue to attempt deleting the user record anyway
   }
 
+  // Finally, delete the user row
   const result = await turso.execute({
     sql: `DELETE FROM users WHERE id = ?`,
     args: [userId]
