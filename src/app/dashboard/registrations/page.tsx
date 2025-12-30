@@ -148,6 +148,9 @@ export default function RegistrationsPage() {
               qrData={selectedRegistration.qrCode}
               title="Your Check-in QR Code"
               description="Show this to event staff upon arrival"
+              showDownload={true}
+              userName={selectedRegistration.userName}
+              eventName={selectedRegistration.eventName}
             />
           </div>
 
@@ -210,8 +213,8 @@ export default function RegistrationsPage() {
 
               <div className="flex items-center gap-2 py-2 border-t border-slate-200">
                 <span className={`inline-block w-2 h-2 rounded-full ${registration.status === 'checked-in' ? 'bg-emerald-500' :
-                    registration.status === 'approved' ? 'bg-indigo-500' :
-                      registration.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'
+                  registration.status === 'approved' ? 'bg-indigo-500' :
+                    registration.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'
                   }`}></span>
                 <span className="text-sm font-medium text-slate-700">
                   {registration.status === 'checked-in'

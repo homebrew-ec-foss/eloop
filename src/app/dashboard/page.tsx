@@ -79,6 +79,10 @@ export default function UnifiedDashboard() {
           if (res.ok) {
             const data = await res.json();
             setHasRegistration(data.hasRegistration);
+            // If user has an active registration, capture the event name for header
+            if (data.registration && data.registration.eventName) {
+              setRegisteredEventName(data.registration.eventName);
+            }
           }
         } catch (error) {
           console.error('Error checking registration:', error);
@@ -394,9 +398,9 @@ export default function UnifiedDashboard() {
     return (
       <div className="space-y-4 md:space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl md:text-2xl font-bold">
-            Welcome, {session?.user?.name?.split(' ')[0]}
-          </h2>
+          <div>
+            <p className="text-sm text-slate-600">{registeredEventName || latestEvent?.name || ''}</p>
+          </div>
         </div>
 
         {/* User Registration Section - Shows QR and checkpoint status */}

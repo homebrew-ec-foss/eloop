@@ -44,14 +44,14 @@ export default function UserRegistrationsSection({ viewAsUserId }: { viewAsUserI
       try {
         const endpoint = viewAsUserId ? `/api/admin/view-as?userId=${encodeURIComponent(viewAsUserId)}` : '/api/users/me/status';
         const response = await fetch(endpoint);
-        
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           const errorMessage = errorData.error || `Failed to fetch status: ${response.status}`;
           console.error('Status fetch failed:', errorMessage);
           throw new Error(errorMessage);
         }
-        
+
         const data = await response.json();
         setStatusData(data);
       } catch (err) {
@@ -70,9 +70,9 @@ export default function UserRegistrationsSection({ viewAsUserId }: { viewAsUserI
 
   // Auto-logout applicants who have been approved (so they can login as participant)
   useEffect(() => {
-    if (statusData?.registration && 
-        session?.user?.role === 'applicant' && 
-        statusData.registration.status === 'approved') {
+    if (statusData?.registration &&
+      session?.user?.role === 'applicant' &&
+      statusData.registration.status === 'approved') {
       signOut({ callbackUrl: '/auth/signin?message=Your registration has been approved! Please sign in again to access participant features.' });
     }
   }, [statusData, session?.user?.role]);
@@ -122,102 +122,98 @@ export default function UserRegistrationsSection({ viewAsUserId }: { viewAsUserI
     : null;
 
   // Don't render anything for applicants with approved registrations - they'll be logged out
-  if (session?.user?.role === 'applicant' && 
-      registration.status === 'approved') {
+  if (session?.user?.role === 'applicant' &&
+    registration.status === 'approved') {
     return null;
   }
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
-      <div className="mb-6">
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">{registration.eventName}</h3>
-        <p className="text-sm text-gray-500">
-          {new Date(registration.eventDate).toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })}
-        </p>
-      </div>
+    <div className="grid grid-cols-1 md:[grid-template-columns:300px_520px] gap-2 md:gap-12 items-start">
+      <div>
 
-      {/* QR Code Display - show for participants or when admin is viewing as a user */}
-      {(session.user.role === 'participant' || viewAsUserId) && (
-        <div className="mb-6 flex justify-center">
-          <div className="max-w-sm w-full">
-            <GenericQRDisplay 
-              qrData={registration.qrCode}
-              title="Your Check-in QR Code"
-              description="Show this to event staff at checkpoints"
-            />
-          </div>
-        </div>
-      )}
 
-      {/* Registration Status */}
-      <div className="mb-6 text-center">
-        <h4 className="text-lg font-semibold text-gray-900 mb-2">Registration Status</h4>
-        {registration.status === 'pending' && (
-          <>
-            <div className="inline-flex items-center px-4 py-2 rounded-lg text-base font-medium bg-yellow-100 text-yellow-800">
-              ⏳ Pending Approval
+        {/* QR Code Display - show for participants or when admin is viewing as a user */}
+        {(session.user.role === 'participant' || viewAsUserId) && (
+          <div>
+            <div className="w-[320px]">
+              <GenericQRDisplay
+                qrData={registration.qrCode}
+                title="Your Check-in QR Code"
+                description="Show this to event staff at checkpoints"
+                showDownload={true}
+                userName={statusData?.user.name}
+                eventName={registration.eventName}
+              />
             </div>
-            <p className="text-sm text-gray-600 mt-3 max-w-md mx-auto">
-              Your registration has been submitted successfully. The organizer will review your application and approve it soon. You&apos;ll be able to access your check-in QR code after approval.
-            </p>
-          </>
-        )}
-        {registration.status === 'approved' && !latestCheckIn && (
-          <div className="inline-flex items-center px-4 py-2 rounded-lg text-base font-medium bg-green-100 text-green-800">
-            ✓ Approved - Not Checked In Yet
           </div>
         )}
-        {registration.status === 'rejected' && (
-          <div className="inline-flex items-center px-4 py-2 rounded-lg text-base font-medium bg-red-100 text-red-800">
-            ✗ Not Approved
-          </div>
-        )}
-        {(registration.status === 'checked-in' || latestCheckIn) && (
-          <div className="inline-flex items-center px-4 py-2 rounded-lg text-base font-medium bg-blue-100 text-blue-800">
-            ✓ Checked In at {latestCheckIn?.checkpoint}
-          </div>
-        )}
+
       </div>
 
-      {/* Checkpoint Check-ins List */}
-      {registration.checkpointCheckIns.length > 0 && (
-        <div>
-          <h4 className="text-lg font-semibold text-gray-900 mb-4">Checkpoint History</h4>
-          <div className="space-y-3">
-            {[...registration.checkpointCheckIns].reverse().map((checkIn, index) => (
-              <div 
-                key={index} 
-                className="flex items-start p-4 bg-gray-50 rounded-lg border border-gray-200"
-              >
-                <div className="flex-shrink-0 mt-1">
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                    {registration.checkpointCheckIns.length - index}
+      {/* Checkpoint Status (right column on desktop; stacked on mobile) */}
+      <div>
+        <div className="bg-white shadow rounded-lg p-6 text-center">
+          <h4 className="text-lg font-semibold text-gray-900 mb-2">Checkpoint Status</h4>
+          {registration.status === 'pending' && (
+            <>
+              <div className="inline-flex items-center px-4 py-2 rounded-lg text-base font-medium bg-yellow-100 text-yellow-800">
+                ⏳ Pending Approval
+              </div>
+              <p className="text-sm text-gray-600 mt-3 max-w-md mx-auto">
+                Your registration has been submitted successfully. The organizer will review your application and approve it soon. You&apos;ll be able to access your check-in QR code after approval.
+              </p>
+            </>
+          )}
+          {registration.status === 'approved' && !latestCheckIn && (
+            <div className="inline-flex items-center px-4 py-2 rounded-lg text-base font-medium bg-green-100 text-green-800">
+              ⌛ Not Checked In Yet
+            </div>
+          )}
+          {registration.status === 'rejected' && (
+            <div className="inline-flex items-center px-4 py-2 rounded-lg text-base font-medium bg-red-100 text-red-800">
+              ✗ Not Approved
+            </div>
+          )}
+          {(registration.status === 'checked-in' || latestCheckIn) && (
+            <div className="inline-flex items-center px-4 py-2 rounded-lg text-base font-medium bg-blue-100 text-blue-800">
+              ✓ Checked In at {latestCheckIn?.checkpoint}
+            </div>
+          )}
+        </div>
+
+        {/* Checkpoint Check-ins List */}
+        {registration.checkpointCheckIns.length > 0 && (
+          <div>
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Checkpoint History</h4>
+            <div className="space-y-3">
+              {[...registration.checkpointCheckIns].reverse().map((checkIn, index) => (
+                <div
+                  key={index}
+                  className="flex items-start p-4 bg-gray-50 rounded-lg border border-gray-200"
+                >
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                      {registration.checkpointCheckIns.length - index}
+                    </div>
+                  </div>
+                  <div className="ml-4 flex-grow">
+                    <h5 className="font-semibold text-gray-900">{checkIn.checkpoint}</h5>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {new Date(checkIn.checkedInAt).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </p>
                   </div>
                 </div>
-                <div className="ml-4 flex-grow">
-                  <h5 className="font-semibold text-gray-900">{checkIn.checkpoint}</h5>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {new Date(checkIn.checkedInAt).toLocaleString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true
-                    })}
-                  </p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-
-
+        )}
+      </div>
     </div>
   );
 }
