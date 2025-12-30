@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
+const GuidedTour = dynamic(() => import('@/components/dashboard/GuidedTour'), { ssr: false });
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import UserRegistrationsSection from '@/components/dashboard/UserRegistrationsSection';
+import { getApprovalMessage } from '@/lib/approvalMessage';
 
 interface DashboardStats {
   role: string;
@@ -23,21 +26,25 @@ export default function UnifiedDashboard() {
   const [registeredEventName, setRegisteredEventName] = useState<string>('');
   const [hasRegistration, setHasRegistration] = useState(false);
 
+  // Guided tour state (must be defined unconditionally to avoid hook order mismatch)
+
   const StatCard = ({
     label,
     value,
     href,
     helper,
     accent = 'text-indigo-600',
+    dataTour,
   }: {
     label: string;
     value: string | number;
     href?: string;
     helper?: string;
     accent?: string;
+    dataTour?: string;
   }) => {
     const content = (
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition">
+      <div data-tour={dataTour} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition">
         <p className="text-sm text-slate-500">{label}</p>
         <p className={`text-3xl font-semibold mt-1 ${accent}`}>{value}</p>
         {helper && <p className="text-xs text-slate-500 mt-2">{helper}</p>}
@@ -45,7 +52,7 @@ export default function UnifiedDashboard() {
     );
     if (href) {
       return (
-        <Link href={href} className="block">
+        <Link href={href} data-tour={dataTour} className="block">
           {content}
         </Link>
       );
@@ -53,22 +60,7 @@ export default function UnifiedDashboard() {
     return content;
   };
 
-  // Approval message template controlled via env (client-accessible via NEXT_PUBLIC_*)
-  const approvalTemplate =
-    process.env.NEXT_PUBLIC_APPROVAL_MESSAGE ||
-    "You will receive an email at <strong>{email}</strong> once your application is approved. If selected, submit the payment screenshots when requested. After approval by the organizer, your QR code will appear here and you can show up to the event";
-
-  const escapeHtml = (unsafe?: string) => {
-    if (!unsafe) return '';
-    return unsafe
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  };
-
-  const approvalMessageHtml = approvalTemplate.replace('{email}', escapeHtml(session?.user?.email || ''));
+  const approvalMessageHtml = getApprovalMessage(session?.user?.email || '');
 
   // Check if user has any registration
   useEffect(() => {
@@ -129,6 +121,11 @@ export default function UnifiedDashboard() {
       }
     }
   }, [status, router, session?.user?.role]);
+
+  // Previously we auto-started the tour for organizers with 0 events. That behavior was noisy
+  // and caused the tour popup to appear unexpectedly; prefer manual start instead.
+  // The Start button is shown only when stats.events === 0.
+  // (Left intentionally blank — no auto-start logic.)
 
   const fetchAllEvents = async () => {
     try {
@@ -199,6 +196,10 @@ export default function UnifiedDashboard() {
     }
   };
 
+  // Guided tour state
+  const [showTour, setShowTour] = useState(false);
+
+
   // Volunteer auto-redirect to check-in (immediate, don't wait for stats)
   useEffect(() => {
     if (session?.user?.role === 'volunteer') {
@@ -249,6 +250,8 @@ export default function UnifiedDashboard() {
   }
 
   const role = session?.user?.role || 'applicant';
+  const displayName = session?.user?.name ? session.user.name.trim().split(/\s+/)[0] : '';
+
 
   // Applicant Dashboard - Can browse and register for events
   if (role === 'applicant') {
@@ -273,14 +276,13 @@ export default function UnifiedDashboard() {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-amber-200 p-5 shadow-sm">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-wide text-amber-700">Applicant</p>
-              <h2 className="text-2xl font-semibold text-amber-900">Welcome</h2>
+              <p className="text-xs uppercase tracking-wide text-slate-500">Applicant</p>
+              <h2 className="text-2xl font-semibold text-slate-900">Welcome{displayName ? `, ${displayName}` : ''}</h2>
               <p className="text-slate-700 mt-1">Browse events and register. You&apos;ll get a QR after approval.</p>
             </div>
-            <p className="text-sm text-slate-600 md:max-w-sm" dangerouslySetInnerHTML={{ __html: approvalMessageHtml }} />
           </div>
         </div>
 
@@ -371,6 +373,10 @@ export default function UnifiedDashboard() {
   if (role === 'organizer') {
     return (
       <div className="space-y-6 md:space-y-8">
+        {/* Auto-start guided tour for new organizers when they have no events */}
+        {/* Guided tour (started manually or auto-start) */}
+        <GuidedTour open={showTour} onClose={() => setShowTour(false)} />
+
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">Organizer</p>
@@ -378,14 +384,21 @@ export default function UnifiedDashboard() {
             <p className="text-slate-600 mt-1">Track registrations and volunteer coverage.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/dashboard/events/create" className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium shadow hover:bg-blue-700">Create event</Link>
-            <Link href="/dashboard/volunteers" className="inline-flex items-center px-4 py-2 rounded-lg border border-slate-200 text-slate-700 text-sm font-medium hover:border-blue-200">Volunteers</Link>
+            <Link data-tour="create-event" href="/dashboard/events/create" className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium shadow hover:bg-blue-700">Create event</Link>
+            <Link data-tour="users-link" href="/dashboard/users" className="inline-flex items-center px-4 py-2 rounded-lg border border-slate-200 text-slate-700 text-sm font-medium hover:border-blue-200">Users</Link>
+
+            {session?.user?.role === 'organizer' && stats && Number(stats.events || 0) === 0 && (
+              <div className="relative inline-block">
+                <span className="absolute -inset-1 rounded-full bg-indigo-400 opacity-20 animate-ping" aria-hidden="true" />
+                <button onClick={() => setShowTour(true)} className="relative inline-flex items-center px-3 py-1 rounded-full bg-slate-50 text-slate-700 text-sm border border-slate-200 hover:bg-slate-100 shadow-md ring-2 ring-indigo-400 ring-opacity-30 transform transition-transform hover:scale-105">Start tour</button>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          <StatCard label="My events" value={Number(stats.events || 0)} href="/dashboard/events" accent="text-blue-600" />
-          <StatCard label="Volunteers" value={Number(stats.volunteers || 0)} href="/dashboard/volunteers" accent="text-teal-600" />
+          <StatCard label="My events" value={Number(stats.events || 0)} href="/dashboard/events" accent="text-blue-600" dataTour="stats-my-events" />
+          <StatCard label="Volunteers" value={Number(stats.volunteers || 0)} href="/dashboard/users?filter=volunteer" accent="text-teal-600" />
           <StatCard label="Pending registrations" value={Number(stats.pendingRegistrations || 0)} href="/dashboard/events" helper="Open an event to review" accent="text-amber-600" />
           <StatCard label="Failed scans" value={Number(stats.failedScans || 0)} href="/dashboard/scan-logs" accent="text-indigo-600" />
         </div>

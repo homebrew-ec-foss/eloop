@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Event } from '@/types';
+import dynamic from 'next/dynamic';
 
 // Define API event type that might have string dates
 interface EventFromAPI {
@@ -26,11 +28,13 @@ interface EventFromAPI {
 
 export default function EventsPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [registrationCounts, setRegistrationCounts] = useState<Record<string, number>>({});
   const [userRegistrations, setUserRegistrations] = useState<Record<string, { status: string; id: string }>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchEvents() {
@@ -142,12 +146,32 @@ export default function EventsPage() {
     }
   };
 
+  const handleDelete = async (eventId: string) => {
+    if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
+
+    setDeletingEventId(eventId);
+    try {
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setEvents(events.filter(e => e.id !== eventId));
+      } else {
+        alert('Failed to delete event');
+      }
+    } catch (error) {
+      alert('Error deleting event');
+    } finally {
+      setDeletingEventId(null);
+    }
+  };
+
   const calculateDurationHours = (startDate?: Date | string, endDate?: Date | string) => {
     if (!startDate || !endDate) return null;
 
     const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
     const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
-
     const diff = end.getTime() - start.getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -169,6 +193,8 @@ export default function EventsPage() {
 
   // Only organizers can create events, NOT admins
   const canCreateEvent = userRole === 'organizer';
+  // Only admins and organizers can see applicant management features
+  const canManageApplicants = userRole === 'admin' || userRole === 'organizer';
 
   return (
     <div className="space-y-6">
@@ -192,19 +218,24 @@ export default function EventsPage() {
         </div>
       )}
 
-      <div className="mx-6 flex justify-between items-center">
+      <div className="mx-6 flex flex-col sm:flex-row sm:justify-between items-start gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">{pageTitle}</h1>
           <p className="text-sm text-slate-500 mt-1">Manage and organize your events</p>
         </div>
-        {canCreateEvent && (
-          <Link
-            href="/dashboard/events/create"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors"
-          >
-            Create Event
-          </Link>
-        )}
+
+        <div className="flex items-center gap-3">
+
+
+          {canCreateEvent && (
+            <Link
+              href="/dashboard/events/create"
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors"
+            >
+              Create Event
+            </Link>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -218,22 +249,25 @@ export default function EventsPage() {
           <p className="text-slate-500">Loading events...</p>
         </div>
       ) : events.length === 0 ? (
-        <div className="bg-white border border-slate-200 p-12 rounded-2xl text-center shadow-sm mx-6">
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">
-            {canCreateEvent ? 'No events created yet' : 'No events available'}
-          </h2>
-          <p className="text-slate-500 mb-6">
-            {canCreateEvent
-              ? 'Start by creating your first event to see it listed here.'
-              : 'There are currently no upcoming events to register for.'}
-          </p>
-          {canCreateEvent && (
-            <Link
-              href="/dashboard/events/create"
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium inline-block transition-colors"
-            >
-              Create Your First Event
-            </Link>
+        <div className="mx-6 space-y-4">
+          {canCreateEvent ? (
+            <>
+              <div className="bg-white border border-slate-200 p-8 rounded-2xl text-center shadow-sm">
+                <h2 className="text-xl font-semibold text-slate-900 mb-2">No events created yet</h2>
+                <p className="text-slate-500 mb-6">Start by creating your first event to see it listed here.</p>
+                <Link
+                  href="/dashboard/events/create"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium inline-block transition-colors"
+                >
+                  Create Your First Event
+                </Link>
+              </div>
+            </>
+          ) : (
+            <div className="bg-white border border-slate-200 p-12 rounded-2xl text-center shadow-sm mx-6">
+              <h2 className="text-xl font-semibold text-slate-900 mb-2">No events available</h2>
+              <p className="text-slate-500 mb-6">There are currently no upcoming events to register for.</p>
+            </div>
           )}
         </div>
       ) : (
@@ -319,8 +353,8 @@ export default function EventsPage() {
                     <div className="bg-slate-50 rounded-lg p-3">
                       <div className="flex items-center gap-2 text-sm">
                         <span className={`inline-block w-2 h-2 rounded-full ${userReg.status === 'checked-in' ? 'bg-emerald-500' :
-                            userReg.status === 'approved' ? 'bg-indigo-500' :
-                              userReg.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'
+                          userReg.status === 'approved' ? 'bg-indigo-500' :
+                            userReg.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'
                           }`}></span>
                         <span className="font-medium text-slate-700">
                           {userReg.status === 'checked-in' ? '✓ Checked in' :
@@ -366,6 +400,20 @@ export default function EventsPage() {
                       </Link>
                     )}
                   </div>
+
+                  {/* Delete button for organizers */}
+                  {userRole === 'organizer' && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleDelete(event.id)}
+                        disabled={(registrationCounts[event.id] || 0) > 0 || deletingEventId === event.id}
+                        className="flex-1 text-center px-3 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                        title={(registrationCounts[event.id] || 0) > 0 ? "Cannot delete event with existing registrations" : "Delete event"}
+                      >
+                        {deletingEventId === event.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
+                  )}
 
                   {(userRole === 'admin' || userRole === 'organizer') && (
                     <div className="text-xs text-slate-500 pt-2 border-t border-slate-200">

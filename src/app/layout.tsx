@@ -3,6 +3,8 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Geist, Geist_Mono } from "next/font/google";
 import { NextAuthProvider } from "@/components/auth/AuthProvider";
+import AuthRoleVerifier from "@/components/auth/AuthRoleVerifier";
+import CommandPalette from '@/components/CommandPalette';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -42,6 +44,8 @@ export default function RootLayout({
       >
         <NextAuthProvider>
           {children}
+          <AuthRoleVerifier />
+          <CommandPalette />
         </NextAuthProvider>
         <Analytics />
         <SpeedInsights />

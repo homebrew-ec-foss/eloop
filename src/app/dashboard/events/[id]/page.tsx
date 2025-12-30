@@ -158,11 +158,11 @@ export default function EventPage({ params }: PageParams) {
     try {
       setActionLoading(checkpoint);
 
-      // If we're unlocking a checkpoint that is NOT the special "Registration" checkpoint,
-      // enforce the rule: only one non-registration checkpoint may be unlocked at a time.
-      // So lock any other unlocked non-registration checkpoints first.
+      // If we're unlocking a checkpoint that is NOT the special "Checkin" checkpoint,
+      // enforce the rule: only one non-checkin checkpoint may be unlocked at a time.
+      // So lock any other unlocked non-checkin checkpoints first.
       const isUnlocking = !currentlyUnlocked;
-      const SPECIAL_REG_NAME = 'Registration';
+      const SPECIAL_REG_NAME = 'Checkin';
 
       if (isUnlocking && checkpoint !== SPECIAL_REG_NAME) {
         const othersToLock = (event.unlockedCheckpoints || []).filter(c => c !== checkpoint && c !== SPECIAL_REG_NAME);
@@ -453,7 +453,7 @@ export default function EventPage({ params }: PageParams) {
                         <div>
                           <span className="font-medium text-slate-900">{checkpoint}</span>
                           <span className={`ml-3 text-sm font-medium ${isUnlocked ? 'text-emerald-600' : 'text-slate-500'}`}>
-                            {isUnlocked ? '✓ Unlocked' : 'Locked'}
+                            {isUnlocked ? 'Unlocked' : 'Locked'}
                           </span>
                         </div>
                       </div>
@@ -485,7 +485,7 @@ export default function EventPage({ params }: PageParams) {
             <div className="ml-4 flex-1">
               <span className="font-semibold text-slate-900">Accept New Registrations</span>
               <span className={`ml-3 text-sm font-medium ${event.isRegistrationOpen ?? true ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {event.isRegistrationOpen ?? true ? '✓ Open' : '✗ Closed'}
+                {event.isRegistrationOpen ?? true ? 'Open' : 'Closed'}
               </span>
             </div>
           </label>
@@ -500,7 +500,7 @@ export default function EventPage({ params }: PageParams) {
             <div className="ml-4 flex-1">
               <span className="font-semibold text-slate-900">Form Teams</span>
               <span className={`ml-3 text-sm font-medium ${event.isTeamFormationOpen ?? false ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {event.isTeamFormationOpen ?? false ? '✓ Open' : '✗ Closed'}
+                {event.isTeamFormationOpen ?? false ? 'Open' : 'Closed'}
               </span>
             </div>
           </label>

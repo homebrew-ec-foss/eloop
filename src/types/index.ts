@@ -54,7 +54,6 @@ export interface FormField {
   order: number;
   options?: string[]; // For select and multiselect fields
   placeholder?: string;
-  weight?: number; // Weight for scoring (only for number/slider fields)
   useUserProfile?: boolean; // Whether to pull this field from user profile data
   userProfileField?: 'name' | 'email' | 'custom'; // Which field from the user profile to use
   validation?: {

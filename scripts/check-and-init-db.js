@@ -83,7 +83,7 @@ async function checkAndInitDb() {
           location TEXT,
           image_url TEXT,
           organizer_id TEXT NOT NULL,
-          checkpoints TEXT DEFAULT '["Registration"]',
+          checkpoints TEXT DEFAULT '["Checkin"]',
           unlocked_checkpoints TEXT DEFAULT '[]',
           is_registration_open INTEGER DEFAULT 1,
           is_team_formation_open INTEGER DEFAULT 0,

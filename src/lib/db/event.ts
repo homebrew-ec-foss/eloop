@@ -14,8 +14,8 @@ function rowToEvent(row: Record<string, unknown>): Event {
     location: row.location as string,
     imageUrl: row.image_url ? (row.image_url as string) : undefined,
     organizerId: row.organizer_id as string,
-    checkpoints: row.checkpoints ? JSON.parse(row.checkpoints as string) : ["Registration"],
-    unlockedCheckpoints: row.unlocked_checkpoints ? JSON.parse(row.unlocked_checkpoints as string) : ["Registration"],
+    checkpoints: row.checkpoints ? JSON.parse(row.checkpoints as string) : ["Checkin"],
+    unlockedCheckpoints: row.unlocked_checkpoints ? JSON.parse(row.unlocked_checkpoints as string) : ["Checkin"],
     isRegistrationOpen: row.is_registration_open !== undefined ? Boolean(row.is_registration_open) : true,
     isTeamFormationOpen: row.is_team_formation_open !== undefined ? Boolean(row.is_team_formation_open) : false,
     formSchema: JSON.parse(row.form_schema as string) as FormSchema,
@@ -65,8 +65,8 @@ export async function createEvent(event: Omit<Event, 'id' | 'createdAt' | 'updat
         event.location,
         event.imageUrl || null,
         event.organizerId,
-        JSON.stringify(event.checkpoints || ["Registration"]),
-        JSON.stringify(["Registration"]), // Default: only Registration is unlocked
+        JSON.stringify(event.checkpoints || ["Checkin"]),
+        JSON.stringify(["Checkin"]), // Default: only Checkin is unlocked
         1, // is_registration_open defaults to TRUE
         JSON.stringify(formSchema),
         now,
@@ -80,7 +80,7 @@ export async function createEvent(event: Omit<Event, 'id' | 'createdAt' | 'updat
       ...event,
       id,
       formSchema,
-      unlockedCheckpoints: ["Registration"], // Default: only Registration is unlocked
+      unlockedCheckpoints: ["Checkin"], // Default: only Checkin is unlocked
       createdAt: new Date(now),
       updatedAt: new Date(now)
     };
@@ -220,7 +220,7 @@ export async function unlockCheckpoint(eventId: string, checkpoint: string): Pro
   const event = await getEventById(eventId);
   if (!event) return null;
 
-  const unlockedCheckpoints = event.unlockedCheckpoints || ["Registration"];
+  const unlockedCheckpoints = event.unlockedCheckpoints || ["Checkin"];
 
   // Check if checkpoint exists in event's checkpoint list
   if (!event.checkpoints?.includes(checkpoint)) {
@@ -248,7 +248,7 @@ export async function lockCheckpoint(eventId: string, checkpoint: string): Promi
   const event = await getEventById(eventId);
   if (!event) return null;
 
-  const unlockedCheckpoints = event.unlockedCheckpoints || ["Registration"];
+  const unlockedCheckpoints = event.unlockedCheckpoints || ["Checkin"];
 
   // Remove from unlocked list
   const updatedUnlocked = unlockedCheckpoints.filter(cp => cp !== checkpoint);

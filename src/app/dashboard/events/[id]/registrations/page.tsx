@@ -57,7 +57,13 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
   const initialFilter = (searchParams.get('status') as 'all' | 'pending' | 'approved' | 'rejected' | 'checked-in') || 'all';
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'checked-in'>(initialFilter);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [draftMessage, setDraftMessage] = useState<string>(`Hello!\nYou are invited to {EVENT_NAME}.\nPlease confirm your attendance by completing the payment and uploading the payment receipt using the payment confirmation form below.\n\nPayment confirmation form: https://forms.gle/\n\nPlease complete payment by the deadline.\n\nThanks,\nTeam`);
+
+  // Applicants (no registrations) view
+  const [viewMode, setViewMode] = useState<'registrations' | 'applicants'>('registrations');
+  const [applicants, setApplicants] = useState<Array<{ id: string; name: string; email: string; createdAt: string }>>([]);
+  const [applicantsCount, setApplicantsCount] = useState<number>(0);
+  const [loadingApplicants, setLoadingApplicants] = useState<boolean>(false);
+  const [draftMessage, setDraftMessage] = useState<string>(`Hello!\nYou signed up for {EVENT_NAME}.\nPlease confirm your attendance by completing the payment and uploading the payment receipt using the payment confirmation form below.\n\nPayment confirmation form: https://forms.gle/\n\nPlease complete payment by the deadline. When completing the payment confirmation form, please use the same phone number you provided on your registration so we can match the receipt to your registration.\n\nThanks,\nTeam`);
   const [csvUrl, setCsvUrl] = useState<string>('');
   const [csvRows, setCsvRows] = useState<Array<Record<string, string>>>([]);
   const [csvIndex, setCsvIndex] = useState<Record<string, Record<string, string>>>({});
@@ -459,20 +465,26 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
           <div className="flex flex-col md:flex-row gap-3">
             <div className="flex-1">
               <label className="text-sm text-slate-600 block mb-1 font-medium">Mail BCC (auto-filled)</label>
-              <input value={mailBcc} onChange={e => setMailBcc(e.target.value)} placeholder="team@example.com" className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+
+              <div className="mt-2 flex items-center gap-3">
+                <input value={mailBcc} onChange={e => setMailBcc(e.target.value)} placeholder="team@example.com" className="flex-1 border border-slate-200 rounded-xl p-2.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+
+                <button
+                  onClick={() => {
+                    const bccEmails = filteredRegistrations.map(r => r.user?.email).filter(Boolean) as string[];
+                    if (bccEmails.length === 0) { setPageMessage({ type: 'info', text: 'No recipients' }); return; }
+                    const subject = `Update on ${event?.name || 'event'}`;
+                    const gmailUrl = buildGmailUrl([], bccEmails, subject, draftMessage);
+                    window.open(gmailUrl, '_blank');
+                  }}
+                  className="h-10 px-3 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 font-medium text-sm inline-flex items-center gap-2 whitespace-nowrap"
+                  title="Email all filtered registrations"
+                >
+                  <span className="sr-only">Email All</span>
+                  <span className="hidden md:inline">Email All</span>
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => {
-                const bccEmails = filteredRegistrations.map(r => r.user?.email).filter(Boolean) as string[];
-                if (bccEmails.length === 0) { setPageMessage({ type: 'info', text: 'No recipients' }); return; }
-                const subject = `Update on ${event?.name || 'event'}`;
-                const gmailUrl = buildGmailUrl([], bccEmails, subject, draftMessage);
-                window.open(gmailUrl, '_blank');
-              }}
-              className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium text-sm self-end"
-            >
-              📧 Email All
-            </button>
           </div>
         </div>
       )}
@@ -500,11 +512,12 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
             { key: 'checked-in', label: 'Checked In', count: registrations.filter(r => r.status === 'checked-in').length },
             { key: 'rejected', label: 'Rejected', count: registrations.filter(r => r.status === 'rejected').length },
           ].map(({ key, label, count }) => {
-            const active = statusFilter === key;
+            const active = statusFilter === key && viewMode === 'registrations';
             return (
               <button
                 key={key}
                 onClick={() => {
+                  setViewMode('registrations');
                   setStatusFilter(key as any);
                   const params = new URLSearchParams(window.location.search);
                   params.set('status', key);
@@ -519,6 +532,38 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
               </button>
             );
           })}
+
+          {/* Applicants (no registrations) button */}
+          <button
+            onClick={async () => {
+              if (viewMode === 'applicants') {
+                setViewMode('registrations');
+                return;
+              }
+
+              setViewMode('applicants');
+              setLoadingApplicants(true);
+              try {
+                const resp = await fetch(`/api/admin/applicants/no-registrations?eventId=${encodeURIComponent(eventId)}`);
+                if (!resp.ok) throw new Error('Failed to fetch applicants');
+                const body = await resp.json();
+                setApplicants(body.applicants || []);
+                setApplicantsCount(Number(body.count || (body.applicants || []).length));
+              } catch (err) {
+                console.error('Failed to load applicants for event:', err);
+                setPageMessage({ type: 'error', text: 'Failed to load applicants' });
+                setViewMode('registrations');
+              } finally {
+                setLoadingApplicants(false);
+              }
+            }}
+            className={`px-3 py-2 rounded-full text-sm font-medium border transition ${viewMode === 'applicants'
+              ? 'bg-amber-100 text-amber-800 border-amber-200 shadow-sm'
+              : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-200'
+              }`}
+          >
+            Applicants ({applicantsCount || '–'})
+          </button>
           <button
             onClick={() => fetchData()}
             disabled={refreshing}
@@ -533,7 +578,28 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
         </div>
       </div>
 
-      {filteredRegistrations.length === 0 ? (
+      {viewMode === 'applicants' ? (
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">Applicants with no registrations</h3>
+          {loadingApplicants ? (
+            <div className="text-sm text-slate-500">Loading…</div>
+          ) : applicants.length === 0 ? (
+            <div className="text-sm text-slate-500">No applicants found for this event.</div>
+          ) : (
+            <div className="space-y-3">
+              {applicants.map((a) => (
+                <div key={a.id} className="flex items-center justify-between p-4 border border-slate-100 rounded-lg">
+                  <div className="flex-1">
+                    <div className="font-medium text-slate-900">{a.name || a.email}</div>
+                    <div className="text-sm text-slate-500">{a.email}</div>
+                  </div>
+                  <div className="text-sm text-slate-400">{new Date(a.createdAt).toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : filteredRegistrations.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-6 text-center text-slate-500">
           No {statusFilter === 'all' ? '' : statusFilter} registrations found.
         </div>

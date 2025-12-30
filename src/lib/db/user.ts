@@ -167,6 +167,37 @@ export async function getApplicants(): Promise<UserProfile[]> {
   return result.rows.map(rowToUserProfile);
 }
 
+// Get applicants who have never created a registration
+export async function getApplicantsWithoutRegistrations(): Promise<UserProfile[]> {
+  const result = await turso.execute({
+    sql: `
+      SELECT u.* FROM users u
+      LEFT JOIN registrations r ON u.id = r.user_id
+      WHERE u.role = 'applicant'
+      GROUP BY u.id
+      HAVING COUNT(r.id) = 0
+      ORDER BY u.created_at DESC
+    `
+  });
+
+  return result.rows.map(rowToUserProfile);
+}
+
+export async function getApplicantsWithoutRegistrationsForEvent(eventId: string): Promise<UserProfile[]> {
+  const result = await turso.execute({
+    sql: `
+      SELECT u.* FROM users u
+      WHERE u.role = 'applicant' AND NOT EXISTS (
+        SELECT 1 FROM registrations r WHERE r.user_id = u.id AND r.event_id = ?
+      )
+      ORDER BY u.created_at DESC
+    `,
+    args: [eventId]
+  });
+
+  return result.rows.map(rowToUserProfile);
+}
+
 // Update a user's role
 export async function updateUserRole(userId: string, newRole: UserRole): Promise<UserProfile | null> {
   const now = Date.now();

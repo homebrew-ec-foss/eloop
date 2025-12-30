@@ -34,12 +34,12 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    if (path.startsWith('/dashboard/users') && userRole !== 'admin') {
+    if (path.startsWith('/dashboard/users') && userRole !== 'admin' && userRole !== 'organizer') {
       url.pathname = '/dashboard';
       return NextResponse.redirect(url);
     }
 
-    if ((path.startsWith('/dashboard/events/create') || path.startsWith('/dashboard/volunteers')) && userRole !== 'organizer') {
+    if (path.startsWith('/dashboard/events/create') && userRole !== 'organizer') {
       url.pathname = '/dashboard';
       return NextResponse.redirect(url);
     }

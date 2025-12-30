@@ -21,9 +21,10 @@ export async function GET() {
     // Get user's registrations
     const registrations = await getUserRegistrations(session.user.id);
 
-    // Find the most recent registration (prioritize approved/checked-in, but also show pending)
+    // Find the most recent registration (prioritize approved/checked-in, then pending, then show rejected)
     const activeReg = registrations.find(r => r.status === 'approved' || r.status === 'checked-in')
-      || registrations.find(r => r.status === 'pending');
+      || registrations.find(r => r.status === 'pending')
+      || registrations.find(r => r.status === 'rejected');
 
     if (!activeReg) {
       return NextResponse.json({

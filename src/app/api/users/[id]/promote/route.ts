@@ -16,7 +16,7 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth();
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -50,8 +50,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // If promoting to participant, ensure the user has at least one registration with a QR code
+    if (role === 'participant') {
+      const { getUserRegistrations } = await import('@/lib/db/registration');
+      const regs = await getUserRegistrations(id);
+      const hasQRCode = regs.some(r => r.qrCode && r.qrCode.trim() !== '');
+      if (!hasQRCode) {
+        return NextResponse.json({ error: 'Cannot promote applicant to participant: user has no registration QR code' }, { status: 400 });
+      }
+    }
+
     await updateUserRole(id, role);
-    
+
     // If promoting to volunteer and organizerId provided, update that separately
     if (role === 'volunteer' && organizerId) {
       const { turso: db } = await import('@/lib/db/client');
@@ -60,10 +70,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         args: [organizerId, id]
       });
     }
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: true,
-      message: 'User role updated successfully' 
+      message: 'User role updated successfully'
     });
   } catch (error) {
     console.error('Error updating user role:', error);

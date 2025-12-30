@@ -5,6 +5,7 @@ import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { GenericQRDisplay } from '@/components/qr/GenericQRDisplay';
+import { getApprovalMessage } from '@/lib/approvalMessage';
 
 interface CheckpointCheckIn {
   checkpoint: string;
@@ -70,14 +71,15 @@ export default function UserRegistrationsSection({ viewAsUserId }: { viewAsUserI
     }
   }, [session, searchParams, viewAsUserId]);
 
-  // Auto-logout applicants who have been approved (so they can login as participant)
+  // Role changes (applicant → participant) are handled globally by AuthRoleVerifier; local sign-out removed to avoid redundancy.
+  // Auto sign-out when an applicant's registration is approved (don't prompt the user)
   useEffect(() => {
-    if (statusData?.registration &&
-      session?.user?.role === 'applicant' &&
-      statusData.registration.status === 'approved') {
+    if (viewAsUserId) return; // admins viewing as another user should not be auto-signed-out
+    if (session?.user?.role === 'applicant' && statusData?.registration?.status === 'approved') {
+      // Redirect user to sign-in with a message so their role change will take effect on next sign-in
       signOut({ callbackUrl: '/auth/signin?message=Your registration has been approved! Please sign in again to access participant features.' });
     }
-  }, [statusData, session?.user?.role]);
+  }, [session, statusData, viewAsUserId]);
 
   if (!session?.user) {
     return null;
@@ -135,11 +137,7 @@ export default function UserRegistrationsSection({ viewAsUserId }: { viewAsUserI
   // Append any real checkpoint check-ins
   historyItems.push(...registration.checkpointCheckIns);
 
-  // Don't render anything for applicants with approved registrations - they'll be logged out
-  if (session?.user?.role === 'applicant' &&
-    registration.status === 'approved') {
-    return null;
-  }
+
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -160,8 +158,9 @@ export default function UserRegistrationsSection({ viewAsUserId }: { viewAsUserI
 
       {/* Checkpoint Status (stacked below the ticket) */}
       <div className="w-full max-w-[480px]">
-        <div className="bg-white shadow rounded-lg p-6 text-center">
-          <h4 className="text-lg font-semibold text-gray-900 mb-2">Checkpoint Status</h4>
+        <div className="bg-white shadow rounded-lg p-6 text-left">
+
+          {/* Applicant approval is handled automatically: user will be signed out when approved (no manual prompt) */}
 
 
 
@@ -171,8 +170,11 @@ export default function UserRegistrationsSection({ viewAsUserId }: { viewAsUserI
                 ⏳ Pending Approval
               </div>
               <p className="text-sm text-gray-600 mt-3">
-                Your registration has been submitted successfully. The organizer will review your application and approve it soon. You&apos;ll be able to access your check-in QR code after approval.
+                Your registration for this event has been submitted successfully. The organizer will review your application and approve it soon.
               </p>
+
+              {/* Detailed approval instructions (email + next steps) shown only after user registers */}
+              <div className="mt-3 text-sm text-slate-600" dangerouslySetInnerHTML={{ __html: getApprovalMessage(statusData?.user?.email) }} />
             </>
           )}
           {registration.status === 'approved' && !latestCheckIn && (

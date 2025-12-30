@@ -208,28 +208,7 @@ export const SortableField: React.FC<SortableFieldProps> = ({
             </div>
           </div>
 
-          {/* Weight section for numeric fields */}
-          {(field.type === 'number' || field.type === 'slider') && (
-            <div className="border border-indigo-100 rounded-md p-4 bg-indigo-50 space-y-3">
-              <h4 className="text-sm font-medium text-indigo-900">Scoring Weight</h4>
-              <div>
-                <label className="block text-xs font-medium text-indigo-700 mb-1">
-                  Weight Multiplier
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={field.weight || ''}
-                  onChange={(e) => onUpdate({ weight: parseFloat(e.target.value) })}
-                  placeholder="e.g., 1.0"
-                  className="block w-full border border-indigo-200 rounded-md shadow-sm p-2 text-sm"
-                />
-                <p className="mt-1 text-xs text-indigo-600">
-                  The value of this field will be multiplied by this weight to calculate the total score.
-                </p>
-              </div>
-            </div>
-          )}
+
 
           {/* Validation section for text fields */}
           {(field.type === 'text' || field.type === 'number') && (

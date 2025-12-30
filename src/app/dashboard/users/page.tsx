@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { UserProfile, UserRole } from '@/types';
 import { useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 export default function AdminUsersPage() {
   const searchParams = useSearchParams();
@@ -17,15 +18,27 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'applicant' | UserRole>(filterParam === 'unapproved' ? 'applicant' : filterParam === 'applicant' ? 'applicant' : 'all');
 
+  const { data: session } = useSession();
+
+  // Build visible users for this viewer (organizers shouldn't see admins or themselves)
+  const visibleUsers = session?.user?.role === 'organizer'
+    ? users.filter(u => u.role !== 'admin' && u.id !== session.user.id)
+    : users;
+
+  // Build filter options based on visible users
   const filterOptions: Array<{ key: 'all' | 'applicant' | UserRole; label: string; count: number }> = [
-    { key: 'all', label: 'All users', count: users.length },
-    { key: 'applicant', label: 'Applicants', count: users.filter(u => u.role === 'applicant').length },
-    { key: 'participant', label: 'Participants', count: users.filter(u => u.role === 'participant').length },
-    { key: 'organizer', label: 'Organizers', count: users.filter(u => u.role === 'organizer').length },
-    { key: 'mentor', label: 'Mentors', count: users.filter(u => u.role === 'mentor').length },
-    { key: 'volunteer', label: 'Volunteers', count: users.filter(u => u.role === 'volunteer').length },
-    { key: 'admin', label: 'Admins', count: users.filter(u => u.role === 'admin').length },
+    { key: 'all', label: 'All users', count: visibleUsers.length },
+    { key: 'applicant', label: 'Applicants', count: visibleUsers.filter(u => u.role === 'applicant').length },
+    { key: 'participant', label: 'Participants', count: visibleUsers.filter(u => u.role === 'participant').length },
+    { key: 'organizer', label: 'Organizers', count: visibleUsers.filter(u => u.role === 'organizer').length },
+    { key: 'mentor', label: 'Mentors', count: visibleUsers.filter(u => u.role === 'mentor').length },
+    { key: 'volunteer', label: 'Volunteers', count: visibleUsers.filter(u => u.role === 'volunteer').length },
   ];
+
+  // Admin option remains available only to admins (counts use full users list)
+  if (session?.user?.role === 'admin') {
+    filterOptions.push({ key: 'admin', label: 'Admins', count: users.filter(u => u.role === 'admin').length });
+  }
 
   // Fetch users
   useEffect(() => {
@@ -49,10 +62,11 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, []);
 
-  // Filter users based on role filter
+  // Filter users based on role filter; if organizer, hide admins and self
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
-    const byRole = roleFilter === 'all' ? users : users.filter(user => user.role === roleFilter);
+    let byRole = roleFilter === 'all' ? visibleUsers : visibleUsers.filter(user => user.role === roleFilter);
+
     if (!q) {
       setFilteredUsers(byRole);
       return;
@@ -61,7 +75,7 @@ export default function AdminUsersPage() {
     setFilteredUsers(byRole.filter(user => {
       return (user.name || '').toLowerCase().includes(q) || (user.email || '').toLowerCase().includes(q);
     }));
-  }, [users, roleFilter, searchQuery]);
+  }, [users, roleFilter, searchQuery, session]);
 
   // Update user role
   const updateUserRole = async (userId: string, role: UserRole) => {
@@ -209,8 +223,12 @@ export default function AdminUsersPage() {
                           <option value="participant">Participant</option>
                           <option value="mentor">Mentor</option>
                           <option value="volunteer">Volunteer</option>
-                          <option value="organizer">Organizer</option>
-                          <option value="admin">Admin</option>
+                          {session?.user?.role === 'admin' && (
+                            <>
+                              <option value="organizer">Organizer</option>
+                              <option value="admin">Admin</option>
+                            </>
+                          )}
                         </select>
                         <button
                           onClick={() => updateUserRole(user.id, selectedRole)}
@@ -236,33 +254,35 @@ export default function AdminUsersPage() {
                         >
                           Change role
                         </button>
-                        <button
-                          onClick={async () => {
-                            if (!confirm(`Delete user ${user.name} <${user.email}>? This action cannot be undone.`)) return;
-                            try {
-                              setIsLoading(true);
-                              setError(null);
-                              const res = await fetch('/api/admin/users', {
-                                method: 'DELETE',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ userId: user.id }),
-                              });
-                              if (!res.ok) {
-                                const err = await res.json();
-                                throw new Error(err?.error || 'Failed to delete user');
+                        {session?.user?.role === 'admin' ? (
+                          <button
+                            onClick={async () => {
+                              if (!confirm(`Delete user ${user.name} <${user.email}>? This action cannot be undone.`)) return;
+                              try {
+                                setIsLoading(true);
+                                setError(null);
+                                const res = await fetch('/api/admin/users', {
+                                  method: 'DELETE',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ userId: user.id }),
+                                });
+                                if (!res.ok) {
+                                  const err = await res.json();
+                                  throw new Error(err?.error || 'Failed to delete user');
+                                }
+                                setUsers(prev => prev.filter(u => u.id !== user.id));
+                                setSuccessMessage(`User ${user.name} deleted`);
+                              } catch (err) {
+                                setError('Error deleting user: ' + (err instanceof Error ? err.message : String(err)));
+                              } finally {
+                                setIsLoading(false);
                               }
-                              setUsers(prev => prev.filter(u => u.id !== user.id));
-                              setSuccessMessage(`User ${user.name} deleted`);
-                            } catch (err) {
-                              setError('Error deleting user: ' + (err instanceof Error ? err.message : String(err)));
-                            } finally {
-                              setIsLoading(false);
-                            }
-                          }}
-                          className="text-rose-600 hover:text-rose-800 font-medium"
-                        >
-                          Delete
-                        </button>
+                            }}
+                            className="text-rose-600 hover:text-rose-800 font-medium"
+                          >
+                            Delete
+                          </button>
+                        ) : null}
                       </div>
                     )}
                   </td>
@@ -317,33 +337,35 @@ export default function AdminUsersPage() {
                       >
                         Change role
                       </button>
-                      <button
-                        onClick={async () => {
-                          if (!confirm(`Delete user ${user.name} <${user.email}>? This action cannot be undone.`)) return;
-                          try {
-                            setIsLoading(true);
-                            setError(null);
-                            const res = await fetch('/api/admin/users', {
-                              method: 'DELETE',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ userId: user.id }),
-                            });
-                            if (!res.ok) {
-                              const err = await res.json();
-                              throw new Error(err?.error || 'Failed to delete user');
+                      {session?.user?.role === 'admin' ? (
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Delete user ${user.name} <${user.email}>? This action cannot be undone.`)) return;
+                            try {
+                              setIsLoading(true);
+                              setError(null);
+                              const res = await fetch('/api/admin/users', {
+                                method: 'DELETE',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId: user.id }),
+                              });
+                              if (!res.ok) {
+                                const err = await res.json();
+                                throw new Error(err?.error || 'Failed to delete user');
+                              }
+                              setUsers(prev => prev.filter(u => u.id !== user.id));
+                              setSuccessMessage(`User ${user.name} deleted`);
+                            } catch (err) {
+                              setError('Error deleting user: ' + (err instanceof Error ? err.message : String(err)));
+                            } finally {
+                              setIsLoading(false);
                             }
-                            setUsers(prev => prev.filter(u => u.id !== user.id));
-                            setSuccessMessage(`User ${user.name} deleted`);
-                          } catch (err) {
-                            setError('Error deleting user: ' + (err instanceof Error ? err.message : String(err)));
-                          } finally {
-                            setIsLoading(false);
-                          }
-                        }}
-                        className="text-rose-600 hover:text-rose-800 font-medium"
-                      >
-                        Delete
-                      </button>
+                          }}
+                          className="text-rose-600 hover:text-rose-800 font-medium"
+                        >
+                          Delete
+                        </button>
+                      ) : null}
                     </div>
                   )}
                 </div>

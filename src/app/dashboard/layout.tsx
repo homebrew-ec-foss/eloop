@@ -4,6 +4,8 @@ import React, { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import SharedDashboardLayout from '@/components/dashboard/SharedDashboardLayout';
+import dynamic from 'next/dynamic';
+const GuidedTour = dynamic(() => import('@/components/dashboard/GuidedTour'), { ssr: false });
 import type { UserRole } from '@/types';
 
 const getRoleConfig = (role: UserRole) => {
@@ -43,8 +45,7 @@ const getRoleConfig = (role: UserRole) => {
           {
             title: 'Management',
             items: [
-              { href: '/dashboard/volunteers', label: 'Volunteer Management' },
-              { href: '/dashboard/mentors', label: 'Mentor Management' },
+              { href: '/dashboard/users', label: 'User Management' },
             ],
           },
         ],
@@ -118,11 +119,22 @@ export default function DashboardLayout({
   const { data: session, status } = useSession();
   const router = useRouter();
 
+  // Tour visibility state (declare early to keep hook order stable)
+  const [showTour, setShowTour] = React.useState(false);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
     }
   }, [status, router]);
+
+  // Listen for start signal from pages (e.g., UnifiedDashboard)
+  useEffect(() => {
+    const onStart = () => setShowTour(true);
+    const handler = (e: Event) => onStart();
+    window.addEventListener('eloop:tour-start', handler as EventListener);
+    return () => window.removeEventListener('eloop:tour-start', handler as EventListener);
+  }, []);
 
   if (status === 'loading') {
     return (
@@ -142,6 +154,11 @@ export default function DashboardLayout({
   const role = session.user.role || 'participant';
   const config = getRoleConfig(role);
 
+
+  function onTourClose() {
+    setShowTour(false);
+  }
+
   return (
     <SharedDashboardLayout
       title={config.title}
@@ -150,6 +167,8 @@ export default function DashboardLayout({
       navigation={config.navigation}
     >
       {children}
+
+      <GuidedTour open={showTour} onClose={onTourClose} />
     </SharedDashboardLayout>
   );
 }

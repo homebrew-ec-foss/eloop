@@ -32,7 +32,7 @@ const createEventSchema = z.object({
   registrationCloseDate: z.string().datetime().optional(),
   location: z.string().optional().default(""),
   imageUrl: z.string().url().optional().or(z.literal('')),
-  checkpoints: z.array(z.string()).default(["Registration"]),
+  checkpoints: z.array(z.string()).default(["Checkin"]),
   formFields: z.array(formFieldSchema)
 });
 
@@ -40,7 +40,7 @@ const createEventSchema = z.object({
 export async function POST(request: Request) {
   try {
     const session = await auth();
-    
+
     // User must be logged in
     if (!session?.user) {
       return NextResponse.json(
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
         { status: 401 }
       );
     }
-    
+
     // Only admin or organizer can create events
     const canCreateEvent = await hasOrganizerPrivileges(session.user.id);
     if (!canCreateEvent) {
@@ -57,10 +57,22 @@ export async function POST(request: Request) {
         { status: 403 }
       );
     }
-    
+
+    // Prevent organizers from creating more than one event (enforce one-event-per-organizer policy)
+    if (session.user.role === 'organizer') {
+      const { getOrganizerEvents } = await import('@/lib/db/event');
+      const existing = await getOrganizerEvents(session.user.id);
+      if (existing.length > 0) {
+        return NextResponse.json(
+          { error: 'Organizers may only create one event. Delete old events/contact an admin if you need to add more.' },
+          { status: 403 }
+        );
+      }
+    }
+
     // Parse and validate request body
     const body = await request.json();
-    
+
     console.log("Event creation request body:", JSON.stringify({
       name: body.name,
       description: body.description,
@@ -70,21 +82,21 @@ export async function POST(request: Request) {
       location: body.location,
       checkpoints: body.checkpoints,
       formFieldCount: body.formFields?.length || 0,
-      formFieldSample: body.formFields && body.formFields.length > 0 ? 
+      formFieldSample: body.formFields && body.formFields.length > 0 ?
         JSON.stringify(body.formFields[0]) : 'No fields'
     }));
-    
+
     if (!body.formFields || !Array.isArray(body.formFields)) {
       console.error("Form fields are missing or not an array:", body.formFields);
       return NextResponse.json(
-        { 
-          error: 'Invalid event data', 
+        {
+          error: 'Invalid event data',
           message: 'Form fields are missing or invalid'
         },
         { status: 400 }
       );
     }
-    
+
     // Log all form fields for debugging
     console.log("Form fields:");
     body.formFields.forEach((field: Record<string, unknown>, index: number) => {
@@ -95,12 +107,12 @@ export async function POST(request: Request) {
         required: field.required
       });
     });
-    
+
     const validationResult = createEventSchema.safeParse(body);
-    
+
     if (!validationResult.success) {
       console.error("Validation error:", JSON.stringify(validationResult.error.format(), null, 2));
-      
+
       const errorMessage = Object.entries(validationResult.error.format())
         .filter(([key]) => key !== '_errors')
         .map(([key, value]) => {
@@ -108,31 +120,31 @@ export async function POST(request: Request) {
           return `${key}: ${errorObj._errors?.join(', ') || 'Invalid'}`;
         })
         .join('; ');
-        
+
       return NextResponse.json(
-        { 
-          error: 'Invalid event data', 
+        {
+          error: 'Invalid event data',
           message: errorMessage || 'Validation failed',
-          details: validationResult.error.format() 
+          details: validationResult.error.format()
         },
         { status: 400 }
       );
     }
-    
+
     const { name, description, startDate, endDate, registrationCloseDate, location, imageUrl, checkpoints, formFields } = validationResult.data;
-    
+
     // Ensure all field IDs are valid UUIDs
     const normalizedFields = formFields.map(field => {
       // If the ID is not a UUID, replace it with one
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(field.id);
-      
+
       return {
         ...field,
         id: isUUID ? field.id : crypto.randomUUID(),
         placeholder: field.placeholder || ""
       };
     });
-    
+
     // Create form schema
     const formSchemaId = crypto.randomUUID();
     const formSchema: FormSchema = {
@@ -142,7 +154,7 @@ export async function POST(request: Request) {
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    
+
     // Create event
     const event = await createEvent({
       name,
@@ -157,7 +169,7 @@ export async function POST(request: Request) {
       organizerId: session.user.id,
       formSchema
     });
-    
+
     return NextResponse.json({
       success: true,
       event: {
@@ -177,7 +189,7 @@ export async function POST(request: Request) {
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     console.error('Error message:', error instanceof Error ? error.message : String(error));
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to create event',
         message: error instanceof Error ? error.message : String(error),
         details: error instanceof Error ? error.stack : undefined
