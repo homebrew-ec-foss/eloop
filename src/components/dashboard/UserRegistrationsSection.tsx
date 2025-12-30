@@ -128,30 +128,24 @@ export default function UserRegistrationsSection({ viewAsUserId }: { viewAsUserI
   }
 
   return (
-    <div className="grid grid-cols-1 md:[grid-template-columns:300px_520px] gap-2 md:gap-12 items-start">
-      <div>
+    <div className="flex flex-col items-center gap-6">
 
+      {/* QR Code Display - stacked and centered */}
+      {(session.user.role === 'participant' || viewAsUserId) && (
+        <div className="w-full max-w-[420px]">
+          <GenericQRDisplay
+            qrData={registration.qrCode}
+            title="Your Check-in QR Code"
+            description="Show this to event staff at checkpoints"
+            showDownload={true}
+            userName={statusData?.user.name}
+            eventName={registration.eventName}
+          />
+        </div>
+      )}
 
-        {/* QR Code Display - show for participants or when admin is viewing as a user */}
-        {(session.user.role === 'participant' || viewAsUserId) && (
-          <div>
-            <div className="w-[320px]">
-              <GenericQRDisplay
-                qrData={registration.qrCode}
-                title="Your Check-in QR Code"
-                description="Show this to event staff at checkpoints"
-                showDownload={true}
-                userName={statusData?.user.name}
-                eventName={registration.eventName}
-              />
-            </div>
-          </div>
-        )}
-
-      </div>
-
-      {/* Checkpoint Status (right column on desktop; stacked on mobile) */}
-      <div>
+      {/* Checkpoint Status (stacked below the ticket) */}
+      <div className="w-full max-w-[480px]">
         <div className="bg-white shadow rounded-lg p-6 text-center">
           <h4 className="text-lg font-semibold text-gray-900 mb-2">Checkpoint Status</h4>
           {registration.status === 'pending' && (
@@ -159,7 +153,7 @@ export default function UserRegistrationsSection({ viewAsUserId }: { viewAsUserI
               <div className="inline-flex items-center px-4 py-2 rounded-lg text-base font-medium bg-yellow-100 text-yellow-800">
                 ⏳ Pending Approval
               </div>
-              <p className="text-sm text-gray-600 mt-3 max-w-md mx-auto">
+              <p className="text-sm text-gray-600 mt-3">
                 Your registration has been submitted successfully. The organizer will review your application and approve it soon. You&apos;ll be able to access your check-in QR code after approval.
               </p>
             </>
@@ -183,7 +177,7 @@ export default function UserRegistrationsSection({ viewAsUserId }: { viewAsUserI
 
         {/* Checkpoint Check-ins List */}
         {registration.checkpointCheckIns.length > 0 && (
-          <div>
+          <div className="mt-6 w-full">
             <h4 className="text-lg font-semibold text-gray-900 mb-4">Checkpoint History</h4>
             <div className="space-y-3">
               {[...registration.checkpointCheckIns].reverse().map((checkIn, index) => (

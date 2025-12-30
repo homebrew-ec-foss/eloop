@@ -1,5 +1,8 @@
+"use client";
+
 import React from 'react';
 import Image from 'next/image';
+import ELogoLoader from '@/components/ui/ELogoLoader';
 
 import QRCode from 'qrcode';
 
@@ -38,7 +41,7 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
       try {
         const url = await QRCode.toDataURL(qrData, {
           margin: 1,
-          width: 300,
+          width: 360,
           color: {
             dark: '#000000',
             light: '#FFFFFF',
@@ -70,8 +73,8 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
 
       qrImg.onload = () => {
         // Set canvas size (header text + QR code + timestamp)
-        const qrSize = 300;
-        const headerHeight = (userName || eventName) ? 60 : 0;
+        const qrSize = 360;
+        const headerHeight = (userName || eventName) ? 68 : 0;
         const timestampHeight = 40;
         const padding = 20;
         canvas.width = qrSize + (padding * 2);
@@ -165,8 +168,49 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
     }
   }, [autoDownload, qrImage]);
 
+  // Parallax tilt effect (desktop only) + dynamic shadow depth
+  const ticketRef = React.useRef<HTMLDivElement | null>(null);
+  const [transformStyle, setTransformStyle] = React.useState<string>('perspective(900px) rotateX(0deg) rotateY(0deg) translateZ(0px)');
+  const [shadowStyle, setShadowStyle] = React.useState<string>('0 8px 18px rgba(2,6,23,0.06), 0 1px 2px rgba(2,6,23,0.04)');
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Enable only on desktop width to avoid interfering with touch devices
+    if (typeof window === 'undefined' || window.innerWidth < 768) return;
+    const el = ticketRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    const centerX = x - 0.5;
+    const centerY = y - 0.5;
+
+    const rotateY = centerX * 14; // degrees (slightly stronger)
+    const rotateX = -centerY * 10; // degrees
+    const translateZ = 8; // px
+
+    // compute shadow based on tilt magnitude
+    const distance = Math.sqrt(centerX * centerX + centerY * centerY);
+    const offsetX = Math.round(-centerX * 14);
+    const offsetY = Math.round(centerY * 18);
+    const blur = Math.round(20 + distance * 30);
+    const opacity = (0.06 + Math.min(0.16, distance * 0.18)).toFixed(3);
+
+    const newShadow = `${offsetX}px ${offsetY}px ${blur}px rgba(2,6,23,${opacity}), 0 2px 6px rgba(2,6,23,0.06)`;
+
+    // use rAF for smooth updates
+    window.requestAnimationFrame(() => {
+      setTransformStyle(`perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${translateZ}px)`);
+      setShadowStyle(newShadow);
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setTransformStyle('perspective(900px) rotateX(0deg) rotateY(0deg) translateZ(0px)');
+    setShadowStyle('0 8px 18px rgba(2,6,23,0.06), 0 1px 2px rgba(2,6,23,0.04)');
+  };
+
   if (!qrImage) {
-    return <div className="w-64 h-64 bg-gray-100 animate-pulse rounded-lg"></div>;
+    return <div className="w-64 h-64 md:w-[420px] md:h-[420px] bg-gray-100 animate-pulse rounded-lg"></div>;
   }
 
   const formattedDate = (eventDate && !isNaN(Date.parse(eventDate)))
@@ -175,7 +219,13 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
 
   return (
     <div className={`flex flex-col items-center ${className} font-sans`}>
-      <div className="bg-white rounded-2xl shadow-md overflow-hidden w-[320px] pt-6">
+      <div
+        ref={ticketRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        className="bg-white rounded-2xl overflow-hidden w-[320px] md:w-[420px] pt-6 transition-transform transition-shadow duration-200 ease-out"
+        style={{ transform: transformStyle, boxShadow: shadowStyle, willChange: 'transform, box-shadow' }}
+      >
 
         {/* Top header inside ticket: event name and description */}
         <div className="px-4 pb-2 text-center">
@@ -185,7 +235,7 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
 
         <div className="px-4 py-3">
           <div className="flex justify-center">
-            <div className="w-56 h-56 relative">
+            <div className="w-[300px] h-[300px] md:w-[360px] md:h-[360px] relative">
               <Image src={qrImage} alt="QR Code" fill style={{ objectFit: 'contain' }} className="rounded" />
             </div>
           </div>
@@ -203,8 +253,8 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
           </div>
           <div className="flex items-center gap-2">
             <div className="text-xxs text-slate-400">Powered by</div>
-            <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-50">
-              <Image src={process.env.NEXT_PUBLIC_SIGNIN_FAVICON || '/favicon.svg'} alt="e" width={20} height={20} className="object-contain" />
+            <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center">
+              <ELogoLoader size={24} colorClass="text-indigo-600" className="m-0" />
             </div>
           </div>
         </div>
