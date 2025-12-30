@@ -41,7 +41,7 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
       try {
         const url = await QRCode.toDataURL(qrData, {
           margin: 1,
-          width: 360,
+          width: 320,
           color: {
             dark: '#000000',
             light: '#FFFFFF',
@@ -73,8 +73,8 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
 
       qrImg.onload = () => {
         // Set canvas size (header text + QR code + timestamp)
-        const qrSize = 360;
-        const headerHeight = (userName || eventName) ? 68 : 0;
+        const qrSize = 320;
+        const headerHeight = (userName || eventName) ? 64 : 0;
         const timestampHeight = 40;
         const padding = 20;
         canvas.width = qrSize + (padding * 2);
@@ -168,45 +168,103 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
     }
   }, [autoDownload, qrImage]);
 
-  // Parallax tilt effect (desktop only) + dynamic shadow depth
+  // Parallax tilt effect (stronger) + dynamic shadow depth
   const ticketRef = React.useRef<HTMLDivElement | null>(null);
-  const [transformStyle, setTransformStyle] = React.useState<string>('perspective(900px) rotateX(0deg) rotateY(0deg) translateZ(0px)');
-  const [shadowStyle, setShadowStyle] = React.useState<string>('0 8px 18px rgba(2,6,23,0.06), 0 1px 2px rgba(2,6,23,0.04)');
+  const [transformStyle, setTransformStyle] = React.useState<string>('perspective(900px) rotateX(0deg) rotateY(0deg) translateZ(0px) scale(1)');
+  const [shadowStyle, setShadowStyle] = React.useState<string>('0 18px 42px rgba(2,6,23,0.10), 0 4px 12px rgba(2,6,23,0.06)');
+  const [wobblePaused, setWobblePaused] = React.useState<boolean>(false);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Enable only on desktop width to avoid interfering with touch devices
-    if (typeof window === 'undefined' || window.innerWidth < 768) return;
+  // Pointer processing function used by mouse/touch and idle simulation
+  function processPointer(clientX: number, clientY: number) {
     const el = ticketRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+
+    const x = (clientX - rect.left) / rect.width;
+    const y = (clientY - rect.top) / rect.height;
     const centerX = x - 0.5;
     const centerY = y - 0.5;
 
-    const rotateY = centerX * 14; // degrees (slightly stronger)
-    const rotateX = -centerY * 10; // degrees
-    const translateZ = 8; // px
+    // amplify rotate and depth
+    const rotateY = centerX * 26; // degrees (stronger)
+    const rotateX = -centerY * 18; // degrees
+    const translateZ = 20; // px
 
     // compute shadow based on tilt magnitude
     const distance = Math.sqrt(centerX * centerX + centerY * centerY);
-    const offsetX = Math.round(-centerX * 14);
-    const offsetY = Math.round(centerY * 18);
-    const blur = Math.round(20 + distance * 30);
-    const opacity = (0.06 + Math.min(0.16, distance * 0.18)).toFixed(3);
+    const offsetX = Math.round(-centerX * 20);
+    const offsetY = Math.round(centerY * 26);
+    const blur = Math.round(28 + distance * 64);
+    const opacity = (0.08 + Math.min(0.36, distance * 0.48)).toFixed(3);
 
-    const newShadow = `${offsetX}px ${offsetY}px ${blur}px rgba(2,6,23,${opacity}), 0 2px 6px rgba(2,6,23,0.06)`;
+    const newShadow = `${offsetX}px ${offsetY}px ${blur}px rgba(2,6,23,${opacity}), 0 6px 18px rgba(2,6,23,0.09)`;
 
-    // use rAF for smooth updates
+    // subtle scale up with tilt
+    const scale = 1 + Math.min(0.08, distance * 0.12);
+
     window.requestAnimationFrame(() => {
-      setTransformStyle(`perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${translateZ}px)`);
+      setTransformStyle(`perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${translateZ}px) scale(${scale})`);
       setShadowStyle(newShadow);
     });
-  };
+  }
 
+  // Idle pointer simulation (clockwise circular path around ticket center) drives parallax when not interacting
+  const idleRafRef = React.useRef<number | null>(null);
+  const idleStartRef = React.useRef<number | null>(null);
+  const IDLE_PERIOD = 5200; // ms, similar to prior wobble duration
+
+  React.useEffect(() => {
+    function step(now: number) {
+      if (idleStartRef.current === null) idleStartRef.current = now;
+      const elapsed = now - (idleStartRef.current || 0);
+      const t = (elapsed % IDLE_PERIOD) / IDLE_PERIOD; // 0..1
+
+      const el = ticketRef.current;
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const radius = Math.min(rect.width, rect.height) * 0.12; // circle radius in px
+
+        // Angle: negative for clockwise motion
+        const angle = -t * Math.PI * 2;
+        const simX = cx + Math.cos(angle) * radius;
+        const simY = cy + Math.sin(angle) * radius;
+
+        // Call same pointer processing that mouse uses to produce identical parallax math
+        processPointer(simX, simY);
+      }
+
+      idleRafRef.current = requestAnimationFrame(step);
+    }
+
+    if (!wobblePaused) {
+      idleStartRef.current = null;
+      idleRafRef.current = requestAnimationFrame(step);
+    } else if (idleRafRef.current) {
+      cancelAnimationFrame(idleRafRef.current);
+      idleRafRef.current = null;
+    }
+
+    return () => {
+      if (idleRafRef.current) cancelAnimationFrame(idleRafRef.current);
+      idleRafRef.current = null;
+    };
+  }, [wobblePaused]);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Parallax only active on desktop widths (>=768px)
+    if (typeof window === 'undefined' || window.innerWidth < 768) return;
+
+    // pause idle wobble while interacting
+    if (!wobblePaused) setWobblePaused(true);
+
+    processPointer(e.clientX, e.clientY);
+  };
   const handleMouseLeave = () => {
-    setTransformStyle('perspective(900px) rotateX(0deg) rotateY(0deg) translateZ(0px)');
-    setShadowStyle('0 8px 18px rgba(2,6,23,0.06), 0 1px 2px rgba(2,6,23,0.04)');
+    setTransformStyle('perspective(900px) rotateX(0deg) rotateY(0deg) translateZ(0px) scale(1)');
+    setShadowStyle('0 18px 42px rgba(2,6,23,0.10), 0 4px 12px rgba(2,6,23,0.06)');
+    if (wobblePaused) setWobblePaused(false);
   };
 
   if (!qrImage) {
@@ -223,6 +281,9 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
         ref={ticketRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
+        onTouchStart={() => setWobblePaused(true)}
+        onTouchEnd={() => setWobblePaused(false)}
+        onTouchCancel={() => setWobblePaused(false)}
         className="bg-white rounded-2xl overflow-hidden w-[320px] md:w-[420px] pt-6 transition-transform transition-shadow duration-200 ease-out"
         style={{ transform: transformStyle, boxShadow: shadowStyle, willChange: 'transform, box-shadow' }}
       >
@@ -235,7 +296,7 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
 
         <div className="px-4 py-3">
           <div className="flex justify-center">
-            <div className="w-[300px] h-[300px] md:w-[360px] md:h-[360px] relative">
+            <div className="w-[260px] h-[260px] md:w-[320px] md:h-[320px] relative">
               <Image src={qrImage} alt="QR Code" fill style={{ objectFit: 'contain' }} className="rounded" />
             </div>
           </div>
@@ -259,6 +320,7 @@ export const GenericQRDisplay: React.FC<GenericQRDisplayProps> = ({
           </div>
         </div>
       </div>
+
     </div>
   );
 };
