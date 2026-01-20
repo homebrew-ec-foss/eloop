@@ -2,7 +2,7 @@
 
 A lightweight, serverless event-management frontend built with Next.js. Supports hierarchical roles, dynamic registration forms, and QR-based check-ins. This repository is maintained by [HSP](https://hsp-ec.xyz).
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fhomebrew-ec-foss%2Feloop&env=QR_SECRET,GOOGLE_CLIENT_SECRET,NEXTAUTH_SECRET,ADMIN_EMAIL,GOOGLE_CLIENT_ID,NEXTAUTH_URL)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fhomebrew-ec-foss%2Feloop&env=QR_SECRET,GOOGLE_CLIENT_SECRET,NEXTAUTH_SECRET,ADMIN_EMAIL,GOOGLE_CLIENT_ID,NEXTAUTH_URL,TURSO_DATABASE_URL,TURSO_AUTH_TOKEN)
 
 <details>
 <summary>After clicking Deploy to Vercel</summary>

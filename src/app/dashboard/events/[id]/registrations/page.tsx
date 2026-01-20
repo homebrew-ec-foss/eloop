@@ -67,8 +67,11 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
   const [csvUrl, setCsvUrl] = useState<string>('');
   const [csvRows, setCsvRows] = useState<Array<Record<string, string>>>([]);
   const [csvIndex, setCsvIndex] = useState<Record<string, Record<string, string>>>({});
-  const [csvKeyField, setCsvKeyField] = useState<string>('SRN');
-  const [csvLinkField, setCsvLinkField] = useState<string>('drive_link');
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvKeyField, setCsvKeyField] = useState<string>('');
+  const [csvLinkField, setCsvLinkField] = useState<string>('');
+  const [csvDuplicateKeys, setCsvDuplicateKeys] = useState<string[]>([]);
+  const [formKeyField, setFormKeyField] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState<Record<string, boolean>>({});
   const [csvLoading, setCsvLoading] = useState<boolean>(false);
   const [mailBcc, setMailBcc] = useState<string>('');
@@ -85,7 +88,7 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
         }
         const data = await resp.json();
         if (data?.csvMailerLink) setCsvUrl(String(data.csvMailerLink));
-        if (data?.csvMailerPrimary && csvKeyField === 'SRN') {
+        if (data?.csvMailerPrimary && !csvKeyField) {
           setCsvKeyField(String(data.csvMailerPrimary));
         }
       } catch {
@@ -109,7 +112,140 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
     return cleaned;
   }
 
+  function normalizeKeyValue(value: string | unknown, isPhoneField: boolean = false): string {
+    const s = String(value ?? '').trim();
+    if (!s) return '';
+
+    if (isPhoneField) {
+      // Normalize phone for matching: strip non-digits and standardize
+      const digits = s.replace(/\D/g, '');
+      if (digits.length === 10) return '91' + digits;
+      return digits;
+    }
+
+    return s.toLowerCase();
+  }
+
+  // --- SYNC HELPERS ---
+  // Determine if we're matching by phone
+  const isPhoneKeyField = !!(formKeyField && formKeyField.toLowerCase().includes('phone'));
+
+  // Get the effective key field to use (form takes priority)
+  const effectiveKeyField = formKeyField || csvKeyField;
+
+  // Get matched and unmatched data
+  function getMatchedAndUnmatchedData() {
+    const matchedKeys = new Set<string>();
+
+    for (const reg of registrations) {
+      let val = '';
+      // Handle special [google] fields
+      if (formKeyField === '[google]name' && reg.user?.name) {
+        val = normalizeKeyValue(reg.user.name, isPhoneKeyField);
+      } else if (formKeyField === '[google]email' && reg.user?.email) {
+        val = normalizeKeyValue(reg.user.email, false);
+      } else if (formKeyField && formKeyField in reg.responses) {
+        val = normalizeKeyValue(reg.responses[formKeyField], isPhoneKeyField);
+      }
+      // Fallback to CSV key field
+      if (!val && csvKeyField && csvKeyField in reg.responses) {
+        val = normalizeKeyValue(reg.responses[csvKeyField], isPhoneKeyField);
+      }
+      // Fallback to email if primary key not found
+      if (!val && reg.user?.email) val = normalizeKeyValue(reg.user.email, false);
+      if (val) matchedKeys.add(val);
+    }
+
+    const unmatched = csvRows.filter(r => {
+      const key = r[csvKeyField] ?? r[csvKeyField.trim()] ?? '';
+      const normalized = normalizeKeyValue(key, isPhoneKeyField);
+      return normalized && !matchedKeys.has(normalized);
+    });
+
+    const matched = csvRows.filter(r => {
+      const key = r[csvKeyField] ?? r[csvKeyField.trim()] ?? '';
+      const normalized = normalizeKeyValue(key, isPhoneKeyField);
+      return normalized && matchedKeys.has(normalized);
+    });
+
+    return { matched, unmatched, matchedKeys };
+  }
+
+  // Find the registration that matches a CSV row
+  function findMatchingRegistration(csvRow: Record<string, string>) {
+    const key = csvRow[csvKeyField] ?? csvRow[csvKeyField.trim()] ?? '';
+    const normalized = normalizeKeyValue(key, isPhoneKeyField);
+    if (!normalized) return null;
+
+    return registrations.find(reg => {
+      let val = '';
+      // Handle special [google] fields
+      if (formKeyField === '[google]name' && reg.user?.name) {
+        val = normalizeKeyValue(reg.user.name, isPhoneKeyField);
+      } else if (formKeyField === '[google]email' && reg.user?.email) {
+        val = normalizeKeyValue(reg.user.email, false);
+      } else if (formKeyField && formKeyField in reg.responses) {
+        val = normalizeKeyValue(reg.responses[formKeyField], isPhoneKeyField);
+      }
+      if (!val && csvKeyField && csvKeyField in reg.responses) {
+        val = normalizeKeyValue(reg.responses[csvKeyField], isPhoneKeyField);
+      }
+      if (!val && reg.user?.email) val = normalizeKeyValue(reg.user.email, false);
+      return val === normalized;
+    }) || null;
+  }
+
+  // Find the CSV row that matches a registration
+  function findMatchingCsvRow(registration: RegistrationWithUser): Record<string, string> | null {
+    let regKeyVal = '';
+
+    // Handle special [google] fields
+    if (formKeyField === '[google]name' && registration.user?.name) {
+      regKeyVal = normalizeKeyValue(registration.user.name, isPhoneKeyField);
+    } else if (formKeyField === '[google]email' && registration.user?.email) {
+      regKeyVal = normalizeKeyValue(registration.user.email, false);
+    } else if (formKeyField && formKeyField in registration.responses) {
+      regKeyVal = normalizeKeyValue(registration.responses[formKeyField], isPhoneKeyField);
+    }
+
+    if (!regKeyVal && csvKeyField && csvKeyField in registration.responses) {
+      regKeyVal = normalizeKeyValue(registration.responses[csvKeyField], isPhoneKeyField);
+    }
+    if (!regKeyVal && registration.user?.email) {
+      regKeyVal = normalizeKeyValue(registration.user.email, false);
+    }
+
+    if (!regKeyVal) return null;
+
+    return csvRows.find(row => {
+      const key = row[csvKeyField] ?? row[csvKeyField.trim()] ?? '';
+      const normalized = normalizeKeyValue(key, isPhoneKeyField);
+      return normalized === regKeyVal;
+    }) || null;
+  }
+
+  function getPhoneFromCsvRow(row: Record<string, string>): string {
+    // Try common phone column names
+    const phoneCandidates = ['phone', 'Phone', 'phone_number', 'Phone Number', 'mobile', 'Mobile', 'mobile_number', 'Mobile Number', 'contact', 'Contact Number'];
+    for (const col of phoneCandidates) {
+      if (col in row) {
+        const phone = cleanPhone(row[col]);
+        if (phone) return phone;
+      }
+    }
+
+    // Search all columns for phone-like data (10+ digits)
+    for (const [, val] of Object.entries(row)) {
+      if (!val) continue;
+      const cleaned = cleanPhone(val);
+      if (cleaned && cleaned.length >= 10) return cleaned;
+    }
+
+    return '';
+  }
+
   function getPhoneFromResponses(responses: Record<string, unknown>) {
+    // Try default candidates
     const candidates = ['Phone Number', 'phone', 'phone_number', 'Phone', 'PHONE', 'Mobile', 'mobile', 'mobile_number', 'contact', 'Contact Number'];
     for (const k of candidates) {
       if (k in responses) {
@@ -143,7 +279,7 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
   // Simple CSV parser (handles quoted fields)
   function parseCSV(text: string) {
     const lines = text.split(/\r?\n/).filter(Boolean);
-    if (lines.length === 0) return [] as Array<Record<string, string>>;
+    if (lines.length === 0) return { header: [] as string[], rows: [] as Array<Record<string, string>> };
     const parseLine = (line: string) => {
       const res: string[] = [];
       let cur = '';
@@ -159,12 +295,13 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
     };
 
     const header = parseLine(lines[0]);
-    return lines.slice(1).map(l => {
+    const rows = lines.slice(1).map(l => {
       const parts = parseLine(l);
       const obj: Record<string, string> = {};
       header.forEach((h, i) => { obj[h] = parts[i] ?? ''; });
       return obj;
     });
+    return { header, rows };
   }
 
   function indexCsv(rows: Array<Record<string, string>>, keyField: string) {
@@ -183,6 +320,33 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
     return idx;
   }
 
+  function findDuplicateKeys(rows: Array<Record<string, string>>, keyField: string) {
+    const normalizedKey = keyField.trim();
+    if (!normalizedKey) return [] as string[];
+
+    const counts = new Map<string, number>();
+    const duplicates = new Set<string>();
+
+    rows.forEach(r => {
+      let val = '';
+      if (normalizedKey in r) val = r[normalizedKey];
+      else {
+        const foundKey = Object.keys(r).find(k => k.trim().toLowerCase() === normalizedKey.toLowerCase());
+        if (foundKey) val = r[foundKey];
+      }
+
+      const keyVal = String(val ?? '').trim();
+      if (!keyVal) return;
+
+      const lower = keyVal.toLowerCase();
+      const next = (counts.get(lower) ?? 0) + 1;
+      counts.set(lower, next);
+      if (next > 1) duplicates.add(keyVal);
+    });
+
+    return Array.from(duplicates);
+  }
+
   const fetchCsvUrl = useCallback(async (url?: string) => {
     const u = (url ?? csvUrl).trim();
     if (!u) { setPageMessage({ type: 'info', text: 'Enter a CSV URL' }); return; }
@@ -191,7 +355,8 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
       const resp = await fetch(u);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const text = await resp.text();
-      const rows = parseCSV(text);
+      const { header, rows } = parseCSV(text);
+      setCsvHeaders(header);
       setCsvRows(rows);
       setCsvIndex(indexCsv(rows, csvKeyField));
       setPageMessage({ type: 'success', text: `Loaded ${rows.length} rows from CSV` });
@@ -208,6 +373,22 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
     if (csvRows.length > 0) return;
     void fetchCsvUrl();
   }, [csvUrl, csvRows.length, fetchCsvUrl]);
+
+  // Rebuild CSV index when key changes
+  useEffect(() => {
+    if (csvRows.length === 0) return;
+    setCsvIndex(indexCsv(csvRows, csvKeyField));
+    setCsvDuplicateKeys(findDuplicateKeys(csvRows, csvKeyField));
+  }, [csvRows, csvKeyField]);
+
+  // When headers load, ensure the link field is one of them
+  useEffect(() => {
+    if (csvHeaders.length === 0) return;
+    if (!csvLinkField) return;
+    if (!csvHeaders.includes(csvLinkField)) {
+      setCsvLinkField('');
+    }
+  }, [csvHeaders, csvLinkField]);
 
   function getPreviewUrlFromLink(link: string) {
     if (!link) return '';
@@ -441,11 +622,43 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
               <label className="text-sm text-slate-600 block mb-1 font-medium">Primary key (e.g. SRN)</label>
-              <input value={csvKeyField} onChange={e => setCsvKeyField(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+              <select
+                value={csvKeyField}
+                onChange={e => setCsvKeyField(e.target.value)}
+                className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white"
+                disabled={csvHeaders.length === 0 || !csvUrl.trim()}
+              >
+                {csvHeaders.length === 0 ? (
+                  <option value="">Load CSV to select</option>
+                ) : (
+                  <>
+                    <option value="">Select field</option>
+                    {csvHeaders.map(h => (
+                      <option key={h} value={h}>{h}</option>
+                    ))}
+                  </>
+                )}
+              </select>
             </div>
             <div>
-              <label className="text-sm text-slate-600 block mb-1 font-medium">Drive link column</label>
-              <input value={csvLinkField} onChange={e => setCsvLinkField(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+              <label className="text-sm text-slate-600 block mb-1 font-medium">Drive Preview-link Column</label>
+              <select
+                value={csvLinkField}
+                onChange={e => setCsvLinkField(e.target.value)}
+                className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white"
+                disabled={csvHeaders.length === 0 || !csvUrl.trim()}
+              >
+                {csvHeaders.length === 0 ? (
+                  <option value="">Load CSV to select</option>
+                ) : (
+                  <>
+                    <option value="">Select column</option>
+                    {csvHeaders.map(h => (
+                      <option key={h} value={h}>{h}</option>
+                    ))}
+                  </>
+                )}
+              </select>
             </div>
             <div>
               <label className="text-sm text-slate-600 block mb-1 font-medium">CSV URL</label>
@@ -461,6 +674,43 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
               </div>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm text-slate-600 block mb-1 font-medium">Eloop primary key (please match the one above)</label>
+              <select
+                value={formKeyField}
+                onChange={e => setFormKeyField(e.target.value)}
+                className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white"
+                disabled={csvHeaders.length === 0 || !csvUrl.trim()}
+              >
+                {csvHeaders.length === 0 ? (
+                  <option value="">Load CSV to select</option>
+                ) : (
+                  <>
+                    <option value="">Select field</option>
+                    <option value="[google]name">[google]name</option>
+                    <option value="[google]email">[google]email</option>
+                    {event?.formSchema?.fields && event.formSchema.fields.map(f => (
+                      <option key={f.id} value={f.name}>{f.label}</option>
+                    ))}
+                  </>
+                )}
+              </select>
+            </div>
+
+          </div>
+
+          {csvDuplicateKeys.length > 0 && (
+            <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+              <span className="text-amber-600 text-lg">⚠️</span>
+              <div className="text-sm text-amber-900 space-y-1">
+                <div className="font-medium">{csvDuplicateKeys.length} duplicate {csvDuplicateKeys.length === 1 ? 'value' : 'values'} in selected key</div>
+                <div className="text-amber-800">Examples: {csvDuplicateKeys.slice(0, 3).join(', ')}{csvDuplicateKeys.length > 3 ? ' …' : ''}</div>
+                <div className="text-amber-800">Duplicates may overwrite each other during matching. Consider picking a unique column.</div>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col md:flex-row gap-3">
             <div className="flex-1">
@@ -704,33 +954,52 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
                   </dl>
                 </div>
 
-                {/* CSV-driven preview if available */}
+                {/* Matched CSV Data */}
                 {(() => {
-                  const keyCandidates = ['SRN', 'srn', 'srn_number', 'roll', 'Roll', 'registration_number', 'Registration Number'];
-                  let regKeyVal = '';
-                  for (const k of keyCandidates) {
-                    if (k in registration.responses) { regKeyVal = String(registration.responses[k] ?? '').trim(); break; }
-                  }
-                  if (!regKeyVal) regKeyVal = registration.user?.email ?? '';
-
-                  const csvRow = csvIndex[regKeyVal] || csvIndex[regKeyVal.toUpperCase?.() ?? ''] || csvIndex[regKeyVal.toLowerCase?.() ?? ''];
+                  const csvRow = findMatchingCsvRow(registration);
                   if (!csvRow) return null;
 
-                  const rawLink = csvRow[csvLinkField] ?? csvRow[csvLinkField.trim()] ?? Object.values(csvRow).find(v => String(v).includes('drive.google.com')) ?? '';
-                  const previewUrl = rawLink ? getPreviewUrlFromLink(String(rawLink)) : '';
+                  const csvLink = csvRow[csvLinkField] ?? '';
+                  const csvPhone = getPhoneFromCsvRow(csvRow);
 
                   return (
-                    <div className="pt-4 border-t border-slate-100">
-                      <button
-                        onClick={() => setPreviewOpen(prev => ({ ...prev, [registration.id]: !prev[registration.id] }))}
-                        className="px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700"
-                      >
-                        {previewOpen[registration.id] ? 'Hide' : 'Show'} PDF
-                      </button>
+                    <div className="pt-4 border-t border-slate-100 space-y-4">
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                        <p className="text-xs text-emerald-600 font-medium mb-2">✓ CSV MATCHED</p>
+                        <div className="space-y-2 text-sm">
+                          {csvPhone && <div><span className="text-slate-600">📞 Phone:</span> <span className="text-slate-900">{csvPhone}</span></div>}
+                          {csvLink && (
+                            <div>
+                              <span className="text-slate-600">📄 Document:</span>
+                              <a href={getPreviewUrlFromLink(csvLink)} target="_blank" rel="noreferrer" className="text-indigo-600 hover:text-indigo-800 underline ml-2">
+                                View
+                              </a>
+                            </div>
+                          )}
+                          {Object.entries(csvRow).map(([key, val]) => {
+                            if (!val || key === csvLinkField || key === effectiveKeyField) return null;
+                            if (key.toLowerCase().includes('phone') || key.toLowerCase().includes('link') || key.toLowerCase().includes('drive')) return null;
+                            return (
+                              <div key={key} className="text-xs">
+                                <span className="text-slate-600">{key}:</span> <span className="text-slate-900">{val}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
 
-                      {previewOpen[registration.id] && previewUrl && (
-                        <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden h-96 md:h-[500px]">
-                          <iframe src={previewUrl} className="w-full h-full" title="Document preview" />
+                      {csvLink && (
+                        <button
+                          onClick={() => setPreviewOpen(prev => ({ ...prev, [registration.id]: !prev[registration.id] }))}
+                          className="px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700"
+                        >
+                          {previewOpen[registration.id] ? 'Hide' : 'Show'} Document
+                        </button>
+                      )}
+
+                      {csvLink && previewOpen[registration.id] && (
+                        <div className="border border-slate-200 rounded-xl overflow-hidden h-96 md:h-[500px]">
+                          <iframe src={getPreviewUrlFromLink(csvLink)} className="w-full h-full" title="CSV Document preview" />
                         </div>
                       )}
                     </div>
@@ -746,46 +1015,146 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
       {csvRows.length > 0 && (
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 space-y-4">
           <div>
-            <p className="text-xs uppercase tracking-wide text-slate-500">CSV</p>
-            <h2 className="text-lg font-semibold text-slate-900">Rows not on platform</h2>
+            <p className="text-xs uppercase tracking-wide text-slate-500">CSV SYNC STATUS</p>
+            <h2 className="text-lg font-semibold text-slate-900">Unmatched CSV Entries</h2>
+            <p className="text-sm text-slate-600 mt-1">Entries in the uploaded CSV that don't correspond to any platform registration</p>
           </div>
           {(() => {
-            // build a set of matched keys from registrations
+            // Build a set of matched keys from registrations (case-insensitive)
             const matchedKeys = new Set<string>();
-            const keyCandidates = ['SRN', 'srn', 'srn_number', 'roll', 'Roll', 'registration_number', 'Registration Number'];
+            // Detect if the key field might be a phone field
+            const isPhoneKey = !!(formKeyField && formKeyField.toLowerCase().includes('phone'));
+
             for (const reg of registrations) {
               let val = '';
-              for (const k of keyCandidates) {
-                if (k in reg.responses) { val = String(reg.responses[k] ?? '').trim(); break; }
+              // Use form key field if specified
+              if (formKeyField && formKeyField in reg.responses) {
+                val = normalizeKeyValue(reg.responses[formKeyField], isPhoneKey);
               }
-              if (!val && reg.user?.email) val = reg.user.email;
-              if (val) matchedKeys.add(val);
+              // Fallback to CSV key field
+              if (!val && csvKeyField && csvKeyField in reg.responses) {
+                val = normalizeKeyValue(reg.responses[csvKeyField], isPhoneKey);
+              }
+              // Fallback to email if primary key not found
+              if (!val && reg.user?.email) val = normalizeKeyValue(reg.user.email, false);
+              if (val) {
+                matchedKeys.add(val);
+              }
             }
 
             const missing = csvRows.filter(r => {
-              const key = r[csvKeyField] ?? r[csvKeyField.trim()] ?? r['SRN'] ?? r['srn'] ?? '';
-              return key && !matchedKeys.has(String(key).trim());
+              const key = r[csvKeyField] ?? r[csvKeyField.trim()] ?? '';
+              const normalized = normalizeKeyValue(key, isPhoneKeyField);
+              return normalized && !matchedKeys.has(normalized);
             });
 
-            if (missing.length === 0) return <p className="text-slate-600">All CSV entries matched. ✓</p>;
+            if (missing.length === 0) {
+              return (
+                <div className="flex items-center gap-2 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <span className="text-emerald-600 text-xl">✓</span>
+                  <p className="text-emerald-700 font-medium">All CSV entries matched successfully</p>
+                </div>
+              );
+            }
 
             return (
-              <div className="space-y-2">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <span className="text-sm font-medium text-amber-900">
+                    {missing.length} unmatched {missing.length === 1 ? 'entry' : 'entries'}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const csv = missing.map(row =>
+                        Object.entries(row).map(([k, v]) => `"${v}"`).join(',')
+                      ).join('\n');
+                      const header = Object.keys(missing[0] || {}).map(k => `"${k}"`).join(',');
+                      const blob = new Blob([header + '\n' + csv], { type: 'text/csv' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `unmatched-entries-${new Date().toISOString().split('T')[0]}.csv`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="px-3 py-1 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700"
+                  >
+                    Export ↓
+                  </button>
+                </div>
                 {missing.map((row, idx) => {
-                  const keyVal = (row[csvKeyField] ?? row[csvKeyField.trim()] ?? row['SRN'] ?? row['srn'] ?? '') as string;
+                  const keyVal = (row[effectiveKeyField] ?? row[effectiveKeyField.trim()] ?? '') as string;
                   const link = (row[csvLinkField] ?? '') as string;
-                  const phone = cleanPhone((row['phone'] ?? row['Phone'] ?? row['mobile'] ?? row['Mobile'] ?? '') as string);
+                  const phone = getPhoneFromCsvRow(row);
+
+                  // Fallback display value if keyVal is empty - try to find a name, SRN, or email
+                  let displayVal = keyVal;
+                  if (!displayVal) {
+                    const nameCandidates = ['Name', 'name', 'NAME', 'Full Name', 'full name'];
+                    const srnCandidates = ['SRN', 'srn', 'Srn'];
+                    const emailCandidates = ['E-mail', 'Email', 'email', 'E-MAIL'];
+
+                    for (const key of nameCandidates) {
+                      if (row[key]) { displayVal = row[key]; break; }
+                    }
+                    if (!displayVal) {
+                      for (const key of srnCandidates) {
+                        if (row[key]) { displayVal = row[key]; break; }
+                      }
+                    }
+                    if (!displayVal) {
+                      for (const key of emailCandidates) {
+                        if (row[key]) { displayVal = row[key]; break; }
+                      }
+                    }
+                    if (!displayVal) displayVal = phone || 'Unnamed Entry';
+                  }
+
                   return (
-                    <div key={idx} className="flex justify-between items-center border border-slate-100 rounded-lg p-3 bg-slate-50">
-                      <div>
-                        <div className="font-medium text-slate-900">{keyVal || '—'}</div>
-                        {link && <div className="text-xs text-slate-600 mt-1 break-all">{link}</div>}
+                    <div key={idx} className="border border-amber-100 rounded-lg p-4 bg-amber-50/30 hover:bg-amber-50 transition-colors space-y-3">
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-slate-900 text-base">{displayVal}</div>
+                          {phone && <div className="text-sm text-slate-600 mt-1">📞 {phone}</div>}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {phone ? (
+                            <button
+                              onClick={() => openWhatsApp(phone, draftMessage)}
+                              className="px-3 py-1.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors"
+                              title="Contact via WhatsApp"
+                            >
+                              📱 Chat
+                            </button>
+                          ) : null}
+                          {link ? (
+                            <a
+                              href={getPreviewUrlFromLink(link)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+                              title="View document"
+                            >
+                              📄 View
+                            </a>
+                          ) : null}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap justify-end">
-                        {phone ? (
-                          <button onClick={() => openWhatsApp(phone, draftMessage)} className="px-3 py-1 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700">📱</button>
-                        ) : null}
-                        {link ? <a href={getPreviewUrlFromLink(link)} target="_blank" rel="noreferrer" className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">PDF</a> : null}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-amber-200">
+                        {Object.entries(row).map(([key, val]) => {
+                          if (!val || key === effectiveKeyField) return null;
+                          const isLinkCol = key === csvLinkField;
+                          const isPhoneCol = key.toLowerCase().includes('phone');
+                          if (isLinkCol || isPhoneCol) return null;
+
+                          return (
+                            <div key={key} className="bg-white/50 rounded px-2 py-1">
+                              <div className="text-xs text-slate-500 uppercase font-medium">{key}</div>
+                              <div className="text-sm text-slate-900 mt-0.5">{val}</div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );
