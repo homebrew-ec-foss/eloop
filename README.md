@@ -2,10 +2,10 @@
 
 A lightweight, serverless event-management frontend built with Next.js. Supports hierarchical roles, dynamic registration forms, and QR-based check-ins. This repository is maintained by [HSP](https://hsp-ec.xyz).
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fhomebrew-ec-foss%2Feloop&env=QR_SECRET,GOOGLE_CLIENT_SECRET,NEXTAUTH_SECRET,ADMIN_EMAIL,GOOGLE_CLIENT_ID,NEXTAUTH_URL,TURSO_DATABASE_URL,TURSO_AUTH_TOKEN)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fhomebrew-ec-foss%2Feloop)
 
 <details>
-<summary>After clicking Deploy to Vercel</summary>
+<summary>Set these environments after clicking Deploy to Vercel</summary>
 
 ## Setup Env variables
 
@@ -17,35 +17,45 @@ The project reads configuration from environment variables. If you deploy with V
 - `NEXTAUTH_URL` — canonical site URL (e.g. `https://your-site.vercel.app`)
 - `NEXTAUTH_SECRET` — secret for NextAuth session encryption
 - `QR_SECRET` — secret used to sign QR payloads
-- `QR_EXPIRATION` — optional default expiration for generated QR tokens (e.g. `30d`, `7d`, `10m`). If not set, defaults to `30d` in the application.
-- `POSTHOG_KEY` — optional instrumentation key (e.g. `phc_xxx`)
-- `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` — provisioned by Vercel when you add the Turso integration
+- `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` — provisioned by Vercel when you add the Turso integration and connect it to your project. If you manage the database outside Vercel, add these variables manually with the values from your Turso dashboard or CLI.
 
 ### Google OAuth Client Setup
+
 1. **Open [Google Console](https://console.cloud.google.com).**
 2. **Access Google Auth Platform**  
-	Click on `View all products` at the bottom of the page.  
-	Locate and select **Google Auth Platform**.
+ Click on `View all products` at the bottom of the page.  
+ Locate and select **Google Auth Platform**.
 3. **Create a New OAuth Client**  
-	- Navigate to the **Clients** tab.
-	- Click **Create Client**.
-	- Set `Application Type` to **Web Application**.
-4. **Configure URIs**  
-	- **Authorised JavaScript origins**:  
-	  Add your frontend URL (e.g., `https://your-frontend.vercel.app`).
-	- **Authorised redirect URIs**:  
-	  Add your backend callback URL (e.g., `https://your-frontend.vercel.app/api/auth/callback/google`).
-5. **Finish Setup**  
-	- Click **Create** to generate your client credentials.
-	- Copy the `Client ID` and `Client Secret` for use in your environment variables.
+
+- Navigate to the **Clients** tab.
+- Click **Create Client**.
+- Set `Application Type` to **Web Application**.
+
+1. **Configure URIs**  
+
+- **Authorised JavaScript origins**:  
+   Add your frontend URL (e.g., `https://your-frontend.vercel.app`).
+- **Authorised redirect URIs**:  
+   Add your backend callback URL (e.g., `https://your-frontend.vercel.app/api/auth/callback/google`).
+
+1. **Finish Setup**  
+
+- Click **Create** to generate your client credentials.
+- Copy the `Client ID` and `Client Secret` for use in your environment variables.
 
 ### Database Setup
+
 1. In the Vercel dashboard, open your project and go to Integrations → Install Integrations.
 2. Find "Turso" and follow the prompts to provision a database for your project. During installation Vercel will add `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` to your project's environment variables automatically.
 
 Deploy the project. On first run the app checks for required tables and will initialize the database automatically. The user who signs in with the `ADMIN_EMAIL` address will be granted the Admin role.
 
 If you prefer to manage the database outside Vercel, you can still create a Turso DB via the Turso dashboard or CLI and copy the resulting `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` into your Vercel environment variables. However, using the Vercel integration is the easiest way to ensure the env vars are wired into your deployment.
+
+### Other Variables
+
+- `QR_EXPIRATION` — optional default expiration for generated QR tokens (e.g. `30d`, `7d`, `10m`). If not set, defaults to `30d` in the application.
+- `POSTHOG_KEY` — optional instrumentation key (e.g. `phc_xxx`)
 
 ---
 
@@ -55,5 +65,5 @@ If you prefer to manage the database outside Vercel, you can still create a Turs
 
 - This project is licensed under AGPL
 - PRs are welcome. For major changes, open an issue first to discuss the design and scope.
-- Original concept & backend: https://github.com/homebrew-ec-foss/eventloop
-- Tilde 4 Project: https://homebrew.hsp-ec.xyz/posts/tilde-4.0-eventloop/
+- Original concept & backend: <https://github.com/homebrew-ec-foss/eventloop>
+- Tilde 4 Project: <https://homebrew.hsp-ec.xyz/posts/tilde-4.0-eventloop/>

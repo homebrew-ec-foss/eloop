@@ -108,7 +108,19 @@ export async function GET(req: Request) {
 
     // Build rows with checkpoint ordering
     const pad = (n: number) => String(n).padStart(2, '0');
-    const built = result.rows.map((r: Record<string, unknown>) => {
+
+    type BuiltRow = {
+      checkpoint: string;
+      participant: string;
+      volunteer: string;
+      scanTime: string;
+      status: string;
+      error: string;
+      createdAt: number;
+      orderIndex: number;
+    };
+
+    const built: BuiltRow[] = result.rows.map((r: Record<string, unknown>) => {
       const checkpoint = String(r.checkpoint ?? '');
       const participant = String(r.participant_name ?? '');
       const volunteer = String(r.volunteer_name ?? '');

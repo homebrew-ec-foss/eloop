@@ -9,7 +9,7 @@ import { turso } from '@/lib/db/client';
 export async function GET() {
   try {
     const session = await auth();
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -45,12 +45,12 @@ export async function GET() {
       LEFT JOIN users v ON sl.volunteer_id = v.id
       LEFT JOIN users u ON sl.user_id = u.id
     `;
-    
+
     // Organizers only see scans from their events
     if (session.user.role === 'organizer') {
       query += ` WHERE e.organizer_id = '${session.user.id}'`;
     }
-    
+
     query += ` ORDER BY sl.created_at DESC LIMIT 200`;
 
     // Fetch all scans (both successful and failed) with volunteer and event details
@@ -70,7 +70,7 @@ export async function GET() {
       return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`;
     };
 
-    const scans = result.rows.map(row => ({
+    const scans = result.rows.map((row: Record<string, unknown>) => ({
       id: row.id as string,
       qr_code: row.qr_code as string | null,
       checkpoint: row.checkpoint as string | null,

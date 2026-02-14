@@ -16,26 +16,27 @@ for (const f of envFiles) {
   }
 }
 
-// Read and validate Turso environment variables early and fail fast
+// Read and validate Turso environment variables early but do not fail imports
 const TURSO_URL = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL;
 const TURSO_AUTH = process.env.TURSO_AUTH_TOKEN;
 
 if (!TURSO_URL) {
-  throw new Error(
-    'TURSO_DATABASE_URL (or DATABASE_URL) environment variable is not set.\n' +
-    'Provide this via your environment, a .env.local file, .env.development.local, or Vercel project settings.'
-  );
+  console.warn('TURSO_DATABASE_URL (or DATABASE_URL) environment variable is not set. Database features will be disabled — running in limited local mode.');
 }
 
 if (!TURSO_AUTH) {
   console.warn('Warning: TURSO_AUTH_TOKEN is not set. Authenticated operations may fail.');
 }
 
-// Initialize Turso client
-export const turso = createClient({
-  url: TURSO_URL,
-  authToken: TURSO_AUTH || undefined,
-});
+// Initialize Turso client (stub when not configured) so importing modules doesn't throw
+export const turso = TURSO_URL
+  ? createClient({ url: TURSO_URL, authToken: TURSO_AUTH || undefined })
+  : ({
+    execute: async () => {
+      throw new Error('TURSO_DATABASE_URL is not configured. Database operations are disabled. Set TURSO_DATABASE_URL to enable DB features.');
+    },
+  } as any);
+
 
 // NOTE: Do NOT run initialization on import. Initialization is handled
 // explicitly by `scripts/check-and-init-db.js` during build or by calling
@@ -44,6 +45,11 @@ export const turso = createClient({
 
 // Create or get Turso tables
 export async function initDatabase() {
+  if (!TURSO_URL) {
+    console.warn('initDatabase(): TURSO_DATABASE_URL not set — skipping database initialization.');
+    return;
+  }
+
   try {
     // User profiles table
     await turso.execute(`
@@ -58,7 +64,6 @@ export async function initDatabase() {
         updated_at INTEGER NOT NULL
       )
     `);
-
     // Events table
     await turso.execute(`
       CREATE TABLE IF NOT EXISTS events (

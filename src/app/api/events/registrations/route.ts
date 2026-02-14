@@ -7,7 +7,7 @@ import { turso } from '@/lib/db/client';
 export async function GET() {
   try {
     const session = await auth();
-    
+
     // User must be logged in
     if (!session?.user) {
       return NextResponse.json(
@@ -15,10 +15,10 @@ export async function GET() {
         { status: 401 }
       );
     }
-    
+
     const userRole = session.user.role || 'participant';
     const userId = session.user.id;
-    
+
     // Applicants cannot view registrations yet
     if (userRole === 'applicant') {
       return NextResponse.json(
@@ -26,9 +26,9 @@ export async function GET() {
         { status: 403 }
       );
     }
-    
+
     let registrationsWithEventDetails;
-    
+
     // For organizers and admins, return ALL registrations across all events
     if (userRole === 'organizer' || userRole === 'admin') {
       const result = await turso.execute(`
@@ -49,8 +49,8 @@ export async function GET() {
         JOIN users u ON r.user_id = u.id
         ORDER BY e.date DESC, r.created_at DESC
       `);
-      
-      registrationsWithEventDetails = result.rows.map((row) => ({
+
+      registrationsWithEventDetails = result.rows.map((row: Record<string, unknown>) => ({
         id: row.id as string,
         eventId: row.eventId as string,
         eventName: row.eventName as string,
@@ -65,12 +65,12 @@ export async function GET() {
     } else {
       // For participants, return only their own registrations
       const registrations = await getUserRegistrations(userId);
-      
+
       // For each registration, fetch the associated event details
       registrationsWithEventDetails = await Promise.all(
         registrations.map(async (registration) => {
           const event = await getEventById(registration.eventId);
-          
+
           return {
             id: registration.id,
             eventId: registration.eventId,
@@ -83,16 +83,16 @@ export async function GET() {
         })
       );
     }
-    
+
     // Return registrations with event details
     return NextResponse.json({ registrations: registrationsWithEventDetails });
-    
+
   } catch (error) {
     console.error('Error fetching registrations:', error);
     // More detailed error message for debugging
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Detailed error:', errorMessage);
-    
+
     return NextResponse.json(
       { error: `Failed to fetch registrations: ${errorMessage}` },
       { status: 500 }

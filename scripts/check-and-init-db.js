@@ -29,15 +29,16 @@ async function checkAndInitDb() {
   const tursoUrl = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL;
   if (!tursoUrl) {
     const foundFiles = envFiles.filter((f) => fs.existsSync(path.resolve(process.cwd(), f)));
-    console.error('TURSO_DATABASE_URL is not set.');
+    console.warn('TURSO_DATABASE_URL is not set.');
     if (foundFiles.length > 0) {
-      console.error('Found these env files in the project root:');
-      for (const f of foundFiles) console.error('  -', f);
+      console.warn('Found these env files in the project root:');
+      for (const f of foundFiles) console.warn('  -', f);
     } else {
-      console.error('No env files were found in the project root.');
+      console.warn('No env files were found in the project root.');
     }
-    console.error('\nRun: vercel env pull .env.development.local');
-    process.exit(1);
+    console.warn('\nRun: vercel env pull .env.development.local');
+    // Return false so callers know init was skipped; do NOT exit the process so `next dev` can continue.
+    return false;
   }
 
   const { createClient } = await import('@libsql/client');
@@ -217,8 +218,11 @@ async function checkAndInitDb() {
 async function main() {
   console.log('Checking database status...');
   try {
-    await checkAndInitDb();
-    console.log('✅ Database check completed');
+    const result = await checkAndInitDb();
+    if (result === false) {
+      console.warn('Skipping DB initialization — continuing in development mode.');
+      return;
+    }
   } catch (error) {
     console.error('❌ Database check failed:', error);
     process.exit(1);

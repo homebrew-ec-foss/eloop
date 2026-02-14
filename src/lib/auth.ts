@@ -3,29 +3,13 @@ import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { getUserByEmail, createUser } from "@/lib/db/user";
 import { UserRole } from "@/types";
+import { getMissingEnvVars } from "@/lib/env";
 
-// Validate environment variables are set properly
-const validateEnv = () => {
-  const requiredEnvVars = [
-    'NEXTAUTH_SECRET',
-    'NEXTAUTH_URL',
-    'GOOGLE_CLIENT_ID',
-    'GOOGLE_CLIENT_SECRET',
-    'TURSO_DATABASE_URL',
-    'TURSO_AUTH_TOKEN'
-  ];
-
-  const missingVars = requiredEnvVars.filter(
-    envVar => !process.env[envVar]
-  );
-
-  if (missingVars.length > 0) {
-    console.error(`Missing required environment variables: ${missingVars.join(', ')}`);
-  } else {
-  }
+// Validate environment variables on startup (delegated to shared helper)
+const missingEnvVars = getMissingEnvVars();
+if (missingEnvVars.length > 0) {
+  console.error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
 }
-
-validateEnv();
 
 // Define the shape of the session user object
 declare module "next-auth" {

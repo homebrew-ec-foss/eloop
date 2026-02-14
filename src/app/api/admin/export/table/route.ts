@@ -25,12 +25,12 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }
-  const table = url.searchParams.get('table');
-  const eventId = url.searchParams.get('event_id');
-  const status = url.searchParams.get('status');
+    const table = url.searchParams.get('table');
+    const eventId = url.searchParams.get('event_id');
+    const status = url.searchParams.get('status');
 
     // whitelist of tables we allow exporting
-    const allowed: Record<string, {select: string, whereEvent?: boolean}> = {
+    const allowed: Record<string, { select: string, whereEvent?: boolean }> = {
       users: { select: 'id, email, name, role, organizer_id, created_at, updated_at' },
       events: { select: 'id, name, description, date, start_date, end_date, registration_close_date, location, organizer_id, checkpoints, is_registration_open, created_at, updated_at' },
       registrations: { select: 'id, event_id, user_id, responses, status, qr_code, checkpoint_checkins, checked_in_by, checked_in_at, approved_by, approved_at, rejected_by, rejected_at, created_at, updated_at', whereEvent: true },
@@ -113,7 +113,7 @@ export async function GET(req: Request) {
 
     const result = await turso.execute(sql, args.length ? args : undefined);
     if (result.rows.length === 0) return NextResponse.json({ error: 'No rows' }, { status: 404 });
-    
+
     // For scan_logs, get event checkpoint order for prefixing
     let checkpointOrder: string[] = [];
     if (table === 'scan_logs' && eventId) {
@@ -146,7 +146,7 @@ export async function GET(req: Request) {
     } else {
       cols = meta.select.split(',').map(c => c.trim());
     }
-    
+
     const escapeCell = (c: unknown) => `"${String(c ?? '').replace(/"/g, '""')}"`;
 
     const fmtExcelDT = (ts: number | string | undefined | null) => {
@@ -166,8 +166,8 @@ export async function GET(req: Request) {
 
     // Prepare set of timestamp-like columns once
     const tsCols = new Set([
-      'created_at','updated_at','date','start_date','end_date','registration_close_date',
-      'checked_in_at','approved_at','rejected_at'
+      'created_at', 'updated_at', 'date', 'start_date', 'end_date', 'registration_close_date',
+      'checked_in_at', 'approved_at', 'rejected_at'
     ]);
 
     // Build checkpoint order map for scan_logs
@@ -178,7 +178,7 @@ export async function GET(req: Request) {
 
     // Build rows with checkpoint prefixing for scan_logs
     const pad = (n: number) => String(n).padStart(2, '0');
-    const builtRows = result.rows.map((row) => {
+    const builtRows: string[][] = result.rows.map((row: Record<string, unknown>) => {
       const cells = cols.map(col => {
         let val: unknown = (row as Record<string, unknown>)[col];
 

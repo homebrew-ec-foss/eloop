@@ -54,7 +54,7 @@ export async function GET(req: Request) {
             args: [eventId]
         });
 
-        const rounds = roundsResult.rows.map((row) => ({
+        const rounds: { id: string; name: string }[] = roundsResult.rows.map((row: Record<string, unknown>) => ({
             id: String(row.id),
             name: String(row.name ?? 'Round')
         }));

@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     if (!eventId) {
       return NextResponse.json({ error: 'Event ID not found in URL' }, { status: 400 });
     }
-    
+
     // Fetch registrations with user data using JOIN
     const result = await turso.execute({
       sql: `
@@ -42,9 +42,9 @@ export async function GET(req: Request) {
       `,
       args: [eventId]
     });
-    
+
     // Transform the results to include user object
-    const registrations = result.rows.map(row => ({
+    const registrations = result.rows.map((row: Record<string, unknown>) => ({
       id: row.id as string,
       eventId: row.event_id as string,
       userId: row.user_id as string,
@@ -64,7 +64,7 @@ export async function GET(req: Request) {
         email: row.user_email as string || 'No email'
       }
     }));
-    
+
     return NextResponse.json({ registrations });
   } catch (error) {
     console.error('Error fetching registrations:', error);

@@ -20,8 +20,6 @@ const geistMono = Geist_Mono({
 const envTitle = process.env.NEXT_PUBLIC_SIGNIN_TITLE;
 const envSubtitle = process.env.NEXT_PUBLIC_SIGNIN_SUBTITLE;
 const favImage = process.env.NEXT_PUBLIC_SIGNIN_FAVICON;
-
-
 export const metadata: Metadata = {
   title: envTitle && envSubtitle ? `${envTitle} - ${envSubtitle}` : envTitle ?? "eloop - Event Management System",
   description: envSubtitle ?? "A serverless event management system with QR code integration",
