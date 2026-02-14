@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getApprovalMessage } from '@/lib/approvalMessage';
 import { Event, FormField } from '@/types';
+import { RenderFormField, validateField } from '@/components/forms/FieldRenderer';
 
 interface PageParams {
   params: Promise<{ id: string }>;
@@ -127,21 +128,6 @@ export default function EventRegistrationPage({ params }: PageParams) {
         return newErrors;
       });
     }
-  };
-
-  const validateField = (field: FormField, value: string): string | null => {
-    // Check if field has validation pattern
-    if (field.validation?.pattern && value) {
-      try {
-        const regex = new RegExp(field.validation.pattern);
-        if (!regex.test(value)) {
-          return field.validation.message || `Invalid format for ${field.label}`;
-        }
-      } catch (error) {
-        console.error('Invalid regex pattern:', field.validation.pattern, error);
-      }
-    }
-    return null;
   };
 
   const validateAllFields = (): boolean => {
@@ -527,7 +513,7 @@ export default function EventRegistrationPage({ params }: PageParams) {
                           {field.label} {field.required && <span className="text-red-500">*</span>}
                         </label>
 
-                        {renderFormField(field, formValues, handleInputChange, validationErrors)}
+                        <RenderFormField field={field} value={formValues[field.name] || ''} onChange={handleInputChange} validationErrors={validationErrors} />
 
                         {/* Google Drive link public access confirmation checkbox */}
                         {field.validation?.pattern && field.validation.pattern.includes('drive.google.com') && formValues[field.name] && formValues[field.name].includes('drive.google.com') && (
@@ -610,160 +596,3 @@ export default function EventRegistrationPage({ params }: PageParams) {
   );
 }
 
-// Helper function to render different field types
-function renderFormField(
-  field: FormField,
-  formValues: Record<string, string>,
-  onChange: (fieldName: string, value: string) => void,
-  validationErrors: Record<string, string> = {}
-) {
-  const value = formValues[field.name] || '';
-  const hasError = !!validationErrors[field.name];
-  const errorClass = hasError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-indigo-500';
-
-  switch (field.type) {
-    case 'text':
-      return (
-        <input
-          type="text"
-          id={field.name}
-          name={field.name}
-          placeholder={field.placeholder}
-          value={value}
-          onChange={(e) => onChange(field.name, e.target.value)}
-          required={field.required}
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errorClass}`}
-        />
-      );
-    case 'email':
-      return (
-        <div>
-          {field.useUserProfile && (
-            <div className="text-xs text-indigo-600 mb-1">
-              🔒 Auto-filled from your profile (read-only)
-            </div>
-          )}
-          <input
-            type="email"
-            id={field.name}
-            name={field.name}
-            placeholder={field.placeholder}
-            value={value}
-            onChange={(e) => onChange(field.name, e.target.value)}
-            required={field.required}
-            disabled={field.useUserProfile}
-            className={`w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 ${field.useUserProfile ? 'border-indigo-300 bg-indigo-50 cursor-not-allowed text-gray-700' : ''}`}
-          />
-        </div>
-      );
-    case 'number':
-      return (
-        <input
-          type="number"
-          id={field.name}
-          name={field.name}
-          placeholder={field.placeholder}
-          value={value}
-          onChange={(e) => onChange(field.name, e.target.value)}
-          required={field.required}
-          className={`w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:border-indigo-400 focus:ring-2 ${errorClass}`}
-        />
-      );
-    case 'select':
-      return (
-        <select
-          id={field.name}
-          name={field.name}
-          value={value}
-          onChange={(e) => onChange(field.name, e.target.value)}
-          required={field.required}
-          className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-        >
-          <option value="">Select an option</option>
-          {field.options?.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      );
-    case 'multiselect':
-      return (
-        <div className="space-y-2">
-          {field.options?.map((option) => {
-            const values = value ? value.split(',') : [];
-            const isChecked = values.includes(option);
-
-            return (
-              <label key={option} className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={(e) => {
-                    const newValues = e.target.checked
-                      ? [...values, option]
-                      : values.filter((v) => v !== option);
-                    onChange(field.name, newValues.join(','));
-                  }}
-                  className="mr-2"
-                />
-                <span>{option}</span>
-              </label>
-            );
-          })}
-        </div>
-      );
-    case 'checkbox':
-      return (
-        <label className="flex items-center">
-          <input
-            type="checkbox"
-            id={field.name}
-            name={field.name}
-            checked={value === 'true'}
-            onChange={(e) => onChange(field.name, e.target.checked ? 'true' : 'false')}
-            required={field.required}
-            className="mr-2"
-          />
-          <span>{field.placeholder || 'Yes'}</span>
-        </label>
-      );
-    case 'date':
-      return (
-        <input
-          type="date"
-          id={field.name}
-          name={field.name}
-          value={value}
-          onChange={(e) => onChange(field.name, e.target.value)}
-          required={field.required}
-          className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-        />
-      );
-    case 'time':
-      return (
-        <input
-          type="time"
-          id={field.name}
-          name={field.name}
-          value={value}
-          onChange={(e) => onChange(field.name, e.target.value)}
-          required={field.required}
-          className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-        />
-      );
-    default:
-      return (
-        <input
-          type="text"
-          id={field.name}
-          name={field.name}
-          placeholder={field.placeholder}
-          value={value}
-          onChange={(e) => onChange(field.name, e.target.value)}
-          required={field.required}
-          className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-        />
-      );
-  }
-}

@@ -7,7 +7,8 @@ export default function WhatsAppMassSender() {
   const [csvUrl, setCsvUrl] = useState('');
   const [rows, setRows] = useState<Array<Record<string, string>>>([]);
   const [filterPending, setFilterPending] = useState(true);
-  const [message, setMessage] = useState(`We invite you to our flagship hackathon, HackNight 7.0!\nPlease go ahead and confirm your attendance by paying on PESU Academy, and attaching your receipt in the form attached below.\n\nPayment confirmation form: https://forms.gle/VmHFWiZDxfmUc3D46\n\nThe deadline for payments is 15th October. This is a hard deadline, and you will not be able to attend if you miss this window. \n\nThank you!\nRegards,\nTeam ACM PESUECC`);
+  const defaultPaymentConfirmationMessage = process.env.NEXT_PUBLIC_PAYMENT_CONFIRMATION_MESSAGE ?? `We invite you to our flagship hackathon, HackNight 7.0!\nPlease go ahead and confirm your attendance by paying on PESU Academy, and attaching your receipt in the form attached below.\n\nPayment confirmation form: https://forms.gle/VmHFWiZDxfmUc3D46\n\nThe deadline for payments is 15th October. This is a hard deadline, and you will not be able to attend if you miss this window. \n\nThank you!\nRegards,\nTeam ACM PESUECC`;
+  const [message, setMessage] = useState(defaultPaymentConfirmationMessage);
 
   function cleanPhone(num?: string) {
     if (!num) return '';

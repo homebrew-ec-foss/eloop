@@ -6,12 +6,14 @@ import { PlusIcon, XMarkIcon, Bars3Icon } from '@heroicons/react/24/outline';
 
 interface SortableFieldProps {
   field: FormField;
+  nameError?: string;
   onUpdate: (updates: Partial<FormField>) => void;
   onDelete: () => void;
 }
 
 export const SortableField: React.FC<SortableFieldProps> = ({
   field,
+  nameError,
   onUpdate,
   onDelete
 }) => {
@@ -171,8 +173,11 @@ export const SortableField: React.FC<SortableFieldProps> = ({
                 type="text"
                 value={field.name}
                 onChange={handleNameChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                className={`mt-1 block w-full rounded-md shadow-sm p-2 ${nameError ? 'border-red-500' : 'border-gray-300'}`}
               />
+              {nameError && (
+                <p className="mt-1 text-xs text-red-600">{nameError}</p>
+              )}
             </div>
           </div>
 

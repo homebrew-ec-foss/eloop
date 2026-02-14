@@ -63,7 +63,8 @@ export default function PendingRegistrationsPage({ params }: PageParams) {
   const [applicants, setApplicants] = useState<Array<{ id: string; name: string; email: string; createdAt: string }>>([]);
   const [applicantsCount, setApplicantsCount] = useState<number>(0);
   const [loadingApplicants, setLoadingApplicants] = useState<boolean>(false);
-  const [draftMessage, setDraftMessage] = useState<string>(`Hello!\nYou signed up for {EVENT_NAME}.\nPlease confirm your attendance by completing the payment and uploading the payment receipt using the payment confirmation form below.\n\nPayment confirmation form: https://forms.gle/\n\nPlease complete payment by the deadline. When completing the payment confirmation form, please use the same phone number you provided on your registration so we can match the receipt to your registration.\n\nThanks,\nTeam`);
+  const defaultPaymentConfirmationMessage = process.env.NEXT_PUBLIC_PAYMENT_CONFIRMATION_MESSAGE || `Hello!\nYou signed up for {EVENT_NAME}.\nPlease confirm your attendance by completing the payment and uploading the payment receipt using the payment confirmation form below.\n\nPayment confirmation form: https://forms.gle/\n\nPlease complete payment by the deadline. When completing the payment confirmation form, please use the same phone number you provided on your registration so we can match the receipt to your registration.\n\nThanks,\nTeam`;
+  const [draftMessage, setDraftMessage] = useState<string>(defaultPaymentConfirmationMessage);
   const [csvUrl, setCsvUrl] = useState<string>('');
   const [csvRows, setCsvRows] = useState<Array<Record<string, string>>>([]);
   const [csvIndex, setCsvIndex] = useState<Record<string, Record<string, string>>>({});

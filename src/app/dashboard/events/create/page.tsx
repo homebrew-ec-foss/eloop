@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { FormBuilder } from '@/components/forms/FormBuilder';
 import { FormField } from '@/types';
+import { RenderFormField, validateField } from '@/components/forms/FieldRenderer';
 
 export default function CreateEventPage() {
   const router = useRouter();
@@ -12,6 +13,9 @@ export default function CreateEventPage() {
   const { data: session, status } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formFields, setFormFields] = useState<FormField[]>([]);
+  const [previewFormValues, setPreviewFormValues] = useState<Record<string, string>>({});
+  const [previewValidationErrors, setPreviewValidationErrors] = useState<Record<string, string>>({});
+  const [previewDrivePublicConfirmed, setPreviewDrivePublicConfirmed] = useState<Record<string, boolean>>({});
   const [dateErrors, setDateErrors] = useState<{
     startDate?: string;
     endDate?: string;
@@ -56,6 +60,63 @@ export default function CreateEventPage() {
 
   const handleFieldsChange = (updatedFields: FormField[]) => {
     setFormFields(updatedFields);
+  };
+
+  const getDuplicateFieldNames = (fList: FormField[]) => {
+    const counts: Record<string, number> = {};
+    fList.forEach(f => {
+      const n = (f.name || '').trim();
+      if (!n) return;
+      counts[n] = (counts[n] || 0) + 1;
+    });
+    return Object.keys(counts).filter(n => counts[n] > 1);
+  };
+
+  const duplicateFieldNames = getDuplicateFieldNames(formFields);
+  const hasDuplicateFieldNames = duplicateFieldNames.length > 0;
+
+  // Initialize preview form values when form fields change
+  useEffect(() => {
+    const vals: Record<string, string> = {};
+    const driveConfirmed: Record<string, boolean> = {};
+    formFields.forEach(f => {
+      if (f.useUserProfile && f.userProfileField === 'email') vals[f.name] = 'user@example.com';
+      else if (f.useUserProfile && f.userProfileField === 'name') vals[f.name] = 'User Name';
+      else vals[f.name] = '';
+      driveConfirmed[f.name] = false;
+    });
+    setPreviewFormValues(vals);
+    setPreviewValidationErrors({});
+    setPreviewDrivePublicConfirmed(driveConfirmed);
+  }, [formFields]);
+
+  const handlePreviewInputChange = (fieldName: string, value: string) => {
+    setPreviewFormValues(prev => ({ ...prev, [fieldName]: value }));
+
+    // Clear preview validation error for this field when user types
+    setPreviewValidationErrors(prev => {
+      const copy = { ...prev };
+      delete copy[fieldName];
+      return copy;
+    });
+
+    const field = formFields.find(f => f.name === fieldName);
+    if (field) {
+      const err = validateField(field, value);
+      if (err) setPreviewValidationErrors(prev => ({ ...prev, [fieldName]: err }));
+    }
+  };
+
+  const isPreviewValid = () => {
+    // required fields must be non-empty (user-profile fields considered filled)
+    for (const f of formFields) {
+      if (f.required) {
+        const val = previewFormValues[f.name] ?? '';
+        const filled = f.useUserProfile ? true : String(val).trim() !== '';
+        if (!filled) return false;
+      }
+    }
+    return Object.keys(previewValidationErrors).length === 0;
   };
 
   // Export entire event template as JSON (including all event data and form fields)
@@ -258,6 +319,12 @@ export default function CreateEventPage() {
 
     if (formFields.length === 0) {
       alert('Please add at least one form field for registration');
+      return;
+    }
+
+    // Prevent submission if duplicate field names exist
+    if (hasDuplicateFieldNames) {
+      alert(`Duplicate field names detected: ${duplicateFieldNames.join(', ')}. Please make field names unique before creating the event.`);
       return;
     }
 
@@ -580,6 +647,11 @@ export default function CreateEventPage() {
           </p>
 
           <FormBuilder fields={formFields} onFieldsChange={handleFieldsChange} />
+          {hasDuplicateFieldNames && (
+            <div className="mt-3 p-3 border border-red-200 bg-red-50 text-red-700 rounded text-sm">
+              Duplicate field names: {duplicateFieldNames.join(', ')} — please make each `Field Name` unique before creating the event.
+            </div>
+          )}
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow border-t-4 border-indigo-500">
@@ -622,6 +694,7 @@ export default function CreateEventPage() {
                 <h3 className="text-xl font-semibold mb-6">{eventData.name || "Event"} Checkin</h3>
 
                 <div className="space-y-4">
+                  {/* preview form state + validation */}
                   {formFields.map(field => (
                     <div key={field.id} className="space-y-2">
                       <div className="flex justify-between">
@@ -637,64 +710,72 @@ export default function CreateEventPage() {
                         )}
                       </div>
 
-                      {field.type === 'text' && (
-                        <input type="text" placeholder={field.placeholder}
-                          className={`w-full border border-gray-300 rounded-lg p-2 ${field.useUserProfile ? 'bg-gray-50' : ''}`} />
-                      )}
+                      <RenderFormField
+                        field={field}
+                        value={previewFormValues[field.name] ?? (field.useUserProfile ? (field.userProfileField === 'email' ? 'user@example.com' : 'User Name') : '')}
+                        onChange={handlePreviewInputChange}
+                        validationErrors={previewValidationErrors}
+                      />
 
-                      {field.type === 'email' && (
-                        <input type="email"
-                          placeholder={field.useUserProfile ? "user@example.com (auto-filled)" : field.placeholder}
-                          className={`w-full border ${field.useUserProfile ? 'border-indigo-200 bg-indigo-50' : 'border-gray-300'} rounded-lg p-2`}
-                          value={field.useUserProfile ? "user@example.com" : ""}
-                          readOnly={field.useUserProfile}
-                        />
-                      )}
-
-                      {field.type === 'number' && (
-                        <input type="number" placeholder={field.placeholder}
-                          className="w-full border border-gray-300 rounded-lg p-2" />
-                      )}
-
-                      {field.type === 'select' && field.options && (
-                        <select className="w-full border border-gray-300 rounded-lg p-2">
-                          <option value="">Select an option</option>
-                          {field.options.map((option, i) => (
-                            <option key={i} value={option}>{option}</option>
-                          ))}
-                        </select>
-                      )}
-
-                      {field.type === 'multiselect' && field.options && (
-                        <div className="space-y-2">
-                          {field.options.map((option, i) => (
-                            <div key={i} className="flex items-center">
-                              <input type="checkbox" id={`preview-${field.id}-${i}`} className="mr-2" />
-                              <label htmlFor={`preview-${field.id}-${i}`}>{option}</label>
+                      {/* Google Drive link public access confirmation for preview */}
+                      {field.validation?.pattern && field.validation.pattern.includes('drive.google.com') && (previewFormValues[field.name] ?? '').includes('drive.google.com') && (
+                        <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded p-3">
+                          <div className="flex items-start mb-2">
+                            <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-800">Verify your link is publicly accessible</p>
+                              <a
+                                href={previewFormValues[field.name]}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:text-blue-800 underline inline-flex items-center mt-1"
+                              >
+                                Open link in new tab to verify
+                                <svg className="w-3 h-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </a>
                             </div>
-                          ))}
+                          </div>
+                          <label className="flex items-start cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={previewDrivePublicConfirmed[field.name] || false}
+                              onChange={(e) => setPreviewDrivePublicConfirmed({
+                                ...previewDrivePublicConfirmed,
+                                [field.name]: e.target.checked
+                              })}
+                              required={field.required && !!previewFormValues[field.name]}
+                              className="mt-0.5 mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-slate-200 rounded"
+                            />
+                            <span className="text-sm text-gray-800">
+                              <span className="font-medium">✓ I confirm this Google Drive file is set to <strong className="text-yellow-800">PUBLIC ACCESS</strong></span>
+                              <span className="block text-xs text-gray-600 mt-1">(Right-click file → Share → General access → Anyone with the link)</span>
+                            </span>
+                          </label>
                         </div>
                       )}
 
-                      {field.type === 'checkbox' && (
-                        <div className="flex items-center">
-                          <input type="checkbox" id={`preview-${field.id}`} className="mr-2" />
-                          <label htmlFor={`preview-${field.id}`}>{field.label}</label>
-                        </div>
+                      {/* Show validation error */}
+                      {previewValidationErrors[field.name] && (
+                        <p className="text-sm text-red-600 mt-1">{previewValidationErrors[field.name]}</p>
                       )}
 
-                      {field.type === 'date' && (
-                        <input type="date" className="w-full border border-gray-300 rounded-lg p-2" />
-                      )}
-
-                      {field.type === 'time' && (
-                        <input type="time" className="w-full border border-gray-300 rounded-lg p-2" />
+                      {/* Show validation hint if pattern exists */}
+                      {field.validation?.pattern && !previewValidationErrors[field.name] && (
+                        <p className="text-xs text-gray-500 mt-1">{field.validation.message || 'Please match the required format'}</p>
                       )}
                     </div>
                   ))}
 
                   <div className="mt-8">
-                    <button type="button" className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium">
+                    <button
+                      type="button"
+                      className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium"
+                      disabled={!isPreviewValid()}
+                    >
                       Submit Registration
                     </button>
                   </div>
@@ -753,7 +834,7 @@ export default function CreateEventPage() {
           <button
             type="submit"
             className="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 font-medium"
-            disabled={isSubmitting || formFields.length === 0}
+            disabled={isSubmitting || formFields.length === 0 || hasDuplicateFieldNames}
           >
             {isSubmitting ? 'Creating...' : 'Create Event'}
           </button>
